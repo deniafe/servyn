@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -7,6 +9,8 @@ import {
   MessageCircle,
   type LucideIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
+import { ScrollReveal, useStaggerMotion } from "@/components/ui/motion";
 
 interface ProviderBenefit {
   icon: LucideIcon;
@@ -38,6 +42,8 @@ const BENEFITS: ReadonlyArray<ProviderBenefit> = [
 ];
 
 export function ForProvidersSection() {
+  const { container, item } = useStaggerMotion(0.06);
+
   return (
     <section
       id="for-providers"
@@ -49,7 +55,7 @@ export function ForProvidersSection() {
       }}
     >
       <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 items-center gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-20">
-        <div>
+        <ScrollReveal>
           <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-400">
             <span
               aria-hidden="true"
@@ -73,11 +79,11 @@ export function ForProvidersSection() {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               href="#for-providers"
-              className="inline-flex items-center gap-2 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-6 py-3 text-[14px] font-bold text-gold-ink shadow-gold transition-[transform,filter] hover:brightness-[1.04] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-6 py-3 text-[14px] font-bold text-gold-ink shadow-gold transition-[transform,filter] hover:brightness-[1.04] active:scale-[0.97]"
             >
               <span>Become a vendor</span>
               <ArrowRight
-                className="size-4"
+                className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
                 strokeWidth={2}
                 aria-hidden="true"
               />
@@ -89,13 +95,23 @@ export function ForProvidersSection() {
               See vendor tools
             </Link>
           </div>
-        </div>
+        </ScrollReveal>
 
-        <ul className="flex flex-col gap-5">
+        <motion.ul
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.15 }}
+          className="flex flex-col gap-5"
+        >
           {BENEFITS.map((benefit) => {
             const Icon = benefit.icon;
             return (
-              <li key={benefit.title} className="flex items-start gap-4">
+              <motion.li
+                key={benefit.title}
+                variants={item}
+                className="flex items-start gap-4"
+              >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border border-gold-25 bg-gold-15 text-gold-400">
                   <Icon
                     className="size-[18px]"
@@ -111,10 +127,10 @@ export function ForProvidersSection() {
                     {benefit.body}
                   </p>
                 </div>
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       </div>
     </section>
   );

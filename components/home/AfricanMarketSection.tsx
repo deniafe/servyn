@@ -3,30 +3,26 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, Check, Plus, Star, Store } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCart } from "@/components/home/CartProvider";
 import { MarketProductIllustration } from "@/components/market/MarketProductIllustration";
+import { ScrollReveal, useStaggerMotion } from "@/components/ui/motion";
 import {
   formatGBP,
-  MARKET_PRODUCTS,
   type MarketProduct,
   type MarketProductId,
 } from "@/lib/mock-market";
 
-const FEATURED_PRODUCT_IDS: ReadonlyArray<MarketProductId> = [
-  "ankara",
-  "shea",
-  "jollof",
-  "soap",
-];
-
-const FEATURED_PRODUCTS = FEATURED_PRODUCT_IDS.map((id) =>
-  MARKET_PRODUCTS.find((product) => product.id === id),
-).filter((product): product is MarketProduct => Boolean(product));
-
 const STARS = [0, 1, 2, 3, 4] as const;
 
-export function AfricanMarketSection() {
+export function AfricanMarketSection({
+  products,
+}: {
+  products: ReadonlyArray<MarketProduct>;
+}) {
   const { addToCart } = useCart();
+  const reduce = useReducedMotion();
+  const { container, item, cardProps } = useStaggerMotion(0.055);
   const [addedId, setAddedId] = React.useState<MarketProductId | null>(null);
   const timerRef = React.useRef<number | undefined>(undefined);
 
@@ -40,7 +36,7 @@ export function AfricanMarketSection() {
     window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
       setAddedId(null);
-    }, 900);
+    }, 950);
   }
 
   return (
@@ -49,7 +45,7 @@ export function AfricanMarketSection() {
       aria-labelledby="market-heading"
       className="mx-auto w-full max-w-[1240px] px-6 pt-10 pb-24 lg:px-8"
     >
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+      <ScrollReveal className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-600">
             <span
@@ -68,45 +64,74 @@ export function AfricanMarketSection() {
 
         <Link
           href="/market"
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-leaf-700 transition-colors hover:text-leaf-900"
+          className="group inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-leaf-700 transition-colors hover:text-leaf-900"
         >
           <span>Shop the market</span>
-          <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden="true" />
+          <ArrowRight
+            className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
         </Link>
-      </div>
+      </ScrollReveal>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {FEATURED_PRODUCTS.map((product) => {
+      <motion.div
+        variants={container}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.12 }}
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {products.map((product) => {
           const isJustAdded = addedId === product.id;
 
           return (
-            <article
+            <motion.article
               key={product.id}
-              className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-lift"
+              variants={item}
+              {...cardProps}
+              className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
             >
               <div className="relative flex aspect-[4/3.6] items-center justify-center overflow-hidden bg-linear-to-br from-gold-50 via-gold-100/60 to-butter/85 p-5">
                 <MarketProductIllustration id={product.id} />
 
-                <button
+                <motion.button
                   type="button"
+                  whileTap={{ scale: 0.88 }}
                   onClick={() => handleQuickAdd(product)}
                   aria-label={`Add ${product.title} to basket`}
-                  className="absolute right-3.5 bottom-3.5 flex size-9 cursor-pointer items-center justify-center rounded-[10px] bg-leaf-900 text-cream shadow-sm transition-[transform,background-color] hover:bg-leaf-800 active:scale-90"
+                  className="absolute right-3.5 bottom-3.5 flex size-9 cursor-pointer items-center justify-center rounded-[10px] bg-leaf-900 text-cream shadow-sm transition-colors hover:bg-leaf-800"
                 >
-                  {isJustAdded ? (
-                    <Check
-                      className="size-4 text-gold-300"
-                      strokeWidth={2.25}
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Plus
-                      className="size-4"
-                      strokeWidth={2}
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
+                  <AnimatePresence mode="wait" initial={false}>
+                    {isJustAdded ? (
+                      <motion.span
+                        key="added"
+                        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.55 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.55 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.24 }}
+                        className="inline-flex items-center justify-center"
+                      >
+                        <Check
+                          className="size-4 text-gold-300"
+                          strokeWidth={2.25}
+                          aria-hidden="true"
+                        />
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="plus"
+                        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.55 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.55 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+                        className="inline-flex items-center justify-center"
+                      >
+                        <Plus className="size-4" strokeWidth={2} aria-hidden="true" />
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
               </div>
 
               <div className="flex flex-1 flex-col p-4">
@@ -147,10 +172,10 @@ export function AfricanMarketSection() {
                   <span className="text-[11.5px] text-mut">retail</span>
                 </div>
               </div>
-            </article>
+            </motion.article>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
   MapPin,
@@ -62,6 +62,7 @@ const ROLES: ReadonlyArray<{ id: RoleMode; label: string }> = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const { cartCount, openCart } = useCart();
   const [area, setArea] = React.useState<string>("Hulme");
@@ -70,6 +71,12 @@ export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [mobileBrowseOpen, setMobileBrowseOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [searchActive, setSearchActive] = React.useState(false);
+  const searchTimerRef = React.useRef<number | undefined>(undefined);
+
+  React.useEffect(() => {
+    return () => window.clearTimeout(searchTimerRef.current);
+  }, []);
 
   React.useEffect(() => {
     const onScroll = () => {
@@ -79,6 +86,21 @@ export function SiteHeader() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  function handleSearchClick() {
+    setMobileOpen(false);
+    if (pathname === "/services") {
+      focusHeroSearch();
+      return;
+    }
+    setSearchActive(true);
+    window.clearTimeout(searchTimerRef.current);
+    // Let the icon pulse play for a beat, then glide to the services page.
+    searchTimerRef.current = window.setTimeout(
+      () => router.push("/services"),
+      shouldReduceMotion ? 0 : 200,
+    );
+  }
 
   function focusHeroSearch() {
     setMobileOpen(false);
@@ -235,12 +257,34 @@ export function SiteHeader() {
 
             <motion.button
               type="button"
-              whileTap={{ scale: 0.94 }}
-              onClick={focusHeroSearch}
-              aria-label="Search"
-              className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-white/[0.08] hover:text-gold-300"
+              whileTap={{ scale: 0.88 }}
+              onClick={handleSearchClick}
+              aria-label="Search services"
+              className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-white/[0.08] hover:text-gold-300"
             >
-              <Search className="size-5" aria-hidden="true" />
+              <AnimatePresence>
+                {searchActive && !shouldReduceMotion && (
+                  <motion.span
+                    aria-hidden="true"
+                    initial={{ opacity: 0.55, scale: 0.6 }}
+                    animate={{ opacity: 0, scale: 1.7 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    className="pointer-events-none absolute inset-0 rounded-full bg-gold-400/40"
+                  />
+                )}
+              </AnimatePresence>
+              <motion.span
+                animate={
+                  searchActive && !shouldReduceMotion
+                    ? { scale: [1, 1.28, 1.12], rotate: [0, -14, 0], color: "#f2b84b" }
+                    : { scale: 1, rotate: 0 }
+                }
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="inline-flex"
+              >
+                <Search className="size-5" aria-hidden="true" />
+              </motion.span>
             </motion.button>
 
             <NotificationsMenu />

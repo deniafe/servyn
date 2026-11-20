@@ -28,13 +28,19 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import type {
+  ServiceCategoryMeta,
+  ServiceCategorySlug,
+  ServiceProvider,
+} from "@/lib/data/services";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  MANCHESTER_SERVICE_AREAS,
-  SERVICE_CATEGORIES,
-  SERVICE_PROVIDERS,
-  type ServiceCategorySlug,
-  type ServiceProvider,
-} from "@/lib/mock-services";
+  APPLE_SPRING_SNAPPY,
+  APPLE_SPRING_TACTILE,
+  HeartPulse,
+  useRevealMotion,
+  useStaggerMotion,
+} from "@/components/ui/motion";
 import { cn } from "@/lib/utils";
 
 type SearchMode = "auto" | "ai" | "keyword";
@@ -64,13 +70,29 @@ interface ActiveFilterChip {
   onRemove: () => void;
 }
 
-export function ServicesDirectory() {
-  const [query, setQuery] = React.useState("");
-  const [searchMode, setSearchMode] = React.useState<SearchMode>("auto");
+interface ServicesDirectoryProps {
+  providers: ReadonlyArray<ServiceProvider>;
+  categories: ReadonlyArray<ServiceCategoryMeta>;
+  areas: ReadonlyArray<string>;
+  initialQuery: string;
+  initialMode: SearchMode;
+  initialCategory: "all" | ServiceCategorySlug;
+}
+
+export function ServicesDirectory({
+  providers,
+  categories,
+  areas,
+  initialQuery,
+  initialMode,
+  initialCategory,
+}: ServicesDirectoryProps) {
+  const [query, setQuery] = React.useState(initialQuery);
+  const [searchMode, setSearchMode] = React.useState<SearchMode>(initialMode);
   const [sortBy, setSortBy] = React.useState<SortOption>("recommended");
   const [selectedCategory, setSelectedCategory] = React.useState<
     "all" | ServiceCategorySlug
-  >("all");
+  >(initialCategory);
   const [selectedArea, setSelectedArea] = React.useState("All Manchester");
   const [maxPrice, setMaxPrice] = React.useState(150);
   const [minRating, setMinRating] = React.useState<RatingFilter>(0);
@@ -81,34 +103,9 @@ export function ServicesDirectory() {
   const [savedIds, setSavedIds] = React.useState<Set<string>>(
     () =>
       new Set(
-        SERVICE_PROVIDERS.filter((p) => p.defaultSaved).map((p) => p.id),
+        providers.filter((p) => p.defaultSaved).map((p) => p.id),
       ),
   );
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const catParam = params.get("category");
-    const qParam = params.get("q");
-    const modeParam = params.get("mode");
-
-    if (!catParam && !qParam && !modeParam) return;
-
-    const frameId = window.requestAnimationFrame(() => {
-      if (
-        catParam &&
-        SERVICE_CATEGORIES.some((c) => c.slug === catParam)
-      ) {
-        setSelectedCategory(catParam as ServiceCategorySlug);
-      }
-      if (qParam) {
-        setQuery(qParam);
-      }
-      if (modeParam === "auto" || modeParam === "ai" || modeParam === "keyword") {
-        setSearchMode(modeParam);
-      }
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
 
   function resetAllFilters() {
     setQuery("");
@@ -134,6 +131,10 @@ export function ServicesDirectory() {
     });
   }
 
+  const reduce = useReducedMotion();
+  const gridMotion = useStaggerMotion(0.045);
+  const mastheadReveal = useRevealMotion();
+
   const parsedPriceMatch = query.match(/under\s*£?(\d+)/i);
   const queryPriceCap =
     searchMode !== "keyword" && parsedPriceMatch
@@ -151,7 +152,34 @@ export function ServicesDirectory() {
     .map((token) => token.trim())
     .filter((token) => token.length >= 2);
 
-  function matchesFilters(
+  function getQueryScore(provider: ServiceProvider): {
+    matchedAll: boolean;
+    matchedCount: number;
+  } {
+    if (queryTerms.length === 0) {
+      return { matchedAll: true, matchedCount: 0 };
+    }
+    const haystack = [
+      provider.name,
+      provider.categoryLabel,
+      provider.area,
+      provider.tagline,
+      ...provider.tags,
+      ...(searchMode === "keyword" ? [] : provider.keywords),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    const matchedCount = queryTerms.filter((term) =>
+      haystack.includes(term),
+    ).length;
+    return {
+      matchedAll: matchedCount === queryTerms.length,
+      matchedCount,
+    };
+  }
+
+  function matchesNonQueryFilters(
     provider: ServiceProvider,
     ignoreCategory = false,
   ): boolean {
@@ -186,38 +214,43 @@ export function ServicesDirectory() {
     if (savedOnly && !savedIds.has(provider.id)) {
       return false;
     }
-
-    if (queryTerms.length > 0) {
-      const haystack = [
-        provider.name,
-        provider.categoryLabel,
-        provider.area,
-        provider.tagline,
-        ...provider.tags,
-        ...(searchMode === "keyword" ? [] : provider.keywords),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const hasMatch =
-        searchMode === "keyword"
-          ? queryTerms.every((term) => haystack.includes(term))
-          : queryTerms.some((term) => haystack.includes(term));
-
-      if (!hasMatch) {
-        return false;
-      }
-    }
-
     return true;
   }
 
-  const baseMatching = SERVICE_PROVIDERS.filter((p) =>
-    matchesFilters(p, true),
+  function filterByQuery(
+    candidates: ReadonlyArray<ServiceProvider>,
+  ): ServiceProvider[] {
+    if (queryTerms.length === 0) {
+      return [...candidates];
+    }
+
+    const scored = candidates.map((provider) => ({
+      provider,
+      ...getQueryScore(provider),
+    }));
+
+    const exactMatches = scored
+      .filter((entry) => entry.matchedAll)
+      .map((entry) => entry.provider);
+
+    if (exactMatches.length > 0 || searchMode === "keyword") {
+      return exactMatches;
+    }
+
+    // In Auto / AI Match mode, gracefully fall back to partial term matches
+    // ranked by how many query terms matched when no provider matches every term.
+    return scored
+      .filter((entry) => entry.matchedCount > 0)
+      .sort((a, b) => b.matchedCount - a.matchedCount)
+      .map((entry) => entry.provider);
+  }
+
+  const baseMatching = filterByQuery(
+    providers.filter((p) => matchesNonQueryFilters(p, true)),
   );
 
-  const filteredProviders = SERVICE_PROVIDERS.filter((p) =>
-    matchesFilters(p, false),
+  const filteredProviders = filterByQuery(
+    providers.filter((p) => matchesNonQueryFilters(p, false)),
   ).sort((a, b) => {
     if (sortBy === "rating") return b.rating - a.rating || b.reviews - a.reviews;
     if (sortBy === "price-asc") return a.startingPrice - b.startingPrice;
@@ -236,7 +269,7 @@ export function ServicesDirectory() {
   }
   if (selectedCategory !== "all") {
     const catLabel =
-      SERVICE_CATEGORIES.find((c) => c.slug === selectedCategory)?.label ??
+      categories.find((c) => c.slug === selectedCategory)?.label ??
       selectedCategory;
     activeChips.push({
       key: "category",
@@ -313,7 +346,7 @@ export function ServicesDirectory() {
       >
         <div className="mx-auto w-full max-w-[1240px] px-6 py-9 lg:px-8 lg:py-11">
           <div className="grid grid-cols-1 items-end gap-7 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-            <div>
+            <motion.div {...mastheadReveal}>
               <h1 className="font-serif text-[clamp(2.25rem,4vw,3.3rem)] leading-[1.06] font-semibold tracking-[-0.025em] text-cream">
                 Find your{" "}
                 <em className="font-normal text-gold-400 italic">person.</em>
@@ -323,7 +356,7 @@ export function ServicesDirectory() {
                 Manchester — transparent starting prices and protected payment
                 on every booking.
               </p>
-            </div>
+            </motion.div>
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-2 rounded-[22px] border border-cream/15 bg-surface p-2 shadow-lift sm:flex-row sm:items-center sm:rounded-full sm:pl-4">
@@ -342,22 +375,28 @@ export function ServicesDirectory() {
                     aria-label="Search services, providers, or areas"
                     className="min-w-0 flex-1 bg-transparent py-1.5 text-[13.5px] text-ink placeholder:text-placeholder focus:outline-none"
                   />
-                  {query.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      aria-label="Clear search query"
-                      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface-2 text-mut transition-colors hover:bg-cream-2 hover:text-ink"
-                    >
-                      <X className="size-3.5" strokeWidth={2} />
-                    </button>
-                  )}
+                  <AnimatePresence>
+                    {query.length > 0 && (
+                      <motion.button
+                        type="button"
+                        initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                        transition={APPLE_SPRING_SNAPPY}
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search query"
+                        className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface-2 text-mut transition-colors hover:bg-cream-2 hover:text-ink"
+                      >
+                        <X className="size-3.5" strokeWidth={2} />
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div
                   role="group"
                   aria-label="Search mode"
-                  className="inline-flex shrink-0 items-center self-start rounded-full bg-surface-2 p-0.5 sm:self-auto"
+                  className="relative inline-flex shrink-0 items-center self-start rounded-full bg-surface-2 p-0.5 sm:self-auto"
                 >
                   {(
                     [
@@ -368,23 +407,31 @@ export function ServicesDirectory() {
                   ).map((mode) => {
                     const active = searchMode === mode.id;
                     return (
-                      <button
+                      <motion.button
                         key={mode.id}
                         type="button"
                         aria-pressed={active}
+                        whileTap={{ scale: 0.96 }}
                         onClick={() => setSearchMode(mode.id)}
                         className={cn(
-                          "inline-flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                          "relative z-[1] inline-flex cursor-pointer items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
                           active
-                            ? "bg-leaf-900 text-cream"
+                            ? "text-cream"
                             : "text-ink-2 hover:text-ink",
                         )}
                       >
+                        {active && (
+                          <motion.span
+                            layoutId="services-search-mode-pill"
+                            transition={APPLE_SPRING_SNAPPY}
+                            className="absolute inset-0 -z-[1] rounded-full bg-leaf-900 shadow-xs"
+                          />
+                        )}
                         {mode.id === "ai" && (
                           <Sparkles className="size-3" aria-hidden="true" />
                         )}
                         <span>{mode.label}</span>
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
@@ -516,7 +563,7 @@ export function ServicesDirectory() {
               All ({baseMatching.length})
             </button>
 
-            {SERVICE_CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const Icon = CATEGORY_ICONS[category.slug];
               const isSelected = selectedCategory === category.slug;
               return (
@@ -600,16 +647,24 @@ export function ServicesDirectory() {
               </p>
               <ul className="mt-1 flex flex-col gap-[1px]">
                 <li>
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedCategory("all")}
                     className={cn(
-                      "flex w-full cursor-pointer items-center justify-between rounded-[9px] px-2.5 py-[5px] text-[12px] font-semibold transition-colors",
+                      "relative z-[1] flex w-full cursor-pointer items-center justify-between rounded-[9px] px-2.5 py-[5px] text-[12px] font-semibold transition-colors",
                       selectedCategory === "all"
-                        ? "bg-leaf-900 text-cream"
+                        ? "text-cream"
                         : "text-ink hover:bg-surface-2",
                     )}
                   >
+                    {selectedCategory === "all" && (
+                      <motion.span
+                        layoutId="services-category-pill"
+                        transition={APPLE_SPRING_SNAPPY}
+                        className="absolute inset-0 -z-[1] rounded-[9px] bg-leaf-900"
+                      />
+                    )}
                     <span>All categories</span>
                     <span
                       className={cn(
@@ -621,10 +676,10 @@ export function ServicesDirectory() {
                     >
                       {baseMatching.length}
                     </span>
-                  </button>
+                  </motion.button>
                 </li>
 
-                {SERVICE_CATEGORIES.map((category) => {
+                {categories.map((category) => {
                   const Icon = CATEGORY_ICONS[category.slug];
                   const isSelected = selectedCategory === category.slug;
                   const count = baseMatching.filter(
@@ -633,16 +688,24 @@ export function ServicesDirectory() {
 
                   return (
                     <li key={category.slug}>
-                      <button
+                      <motion.button
                         type="button"
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setSelectedCategory(category.slug)}
                         className={cn(
-                          "flex w-full cursor-pointer items-center justify-between gap-2 rounded-[9px] px-2.5 py-[5px] text-left text-[12px] font-medium transition-colors",
+                          "relative z-[1] flex w-full cursor-pointer items-center justify-between gap-2 rounded-[9px] px-2.5 py-[5px] text-left text-[12px] font-medium transition-colors",
                           isSelected
-                            ? "bg-leaf-900 font-semibold text-cream"
+                            ? "font-semibold text-cream"
                             : "text-ink-2 hover:bg-surface-2 hover:text-ink",
                         )}
                       >
+                        {isSelected && (
+                          <motion.span
+                            layoutId="services-category-pill"
+                            transition={APPLE_SPRING_SNAPPY}
+                            className="absolute inset-0 -z-[1] rounded-[9px] bg-leaf-900"
+                          />
+                        )}
                         <span className="flex min-w-0 items-center gap-2">
                           <Icon
                             className={cn(
@@ -664,7 +727,7 @@ export function ServicesDirectory() {
                         >
                           {count}
                         </span>
-                      </button>
+                      </motion.button>
                     </li>
                   );
                 })}
@@ -687,7 +750,7 @@ export function ServicesDirectory() {
                   onChange={(e) => setSelectedArea(e.target.value)}
                   className="w-full cursor-pointer appearance-none rounded-[10px] border border-line-2 bg-surface-2 py-1.5 pr-9 pl-3 text-[12.5px] font-medium text-ink transition-colors hover:border-leaf-700 focus:border-leaf-700 focus:outline-none"
                 >
-                  {MANCHESTER_SERVICE_AREAS.map((area) => (
+                  {areas.map((area) => (
                     <option key={area} value={area}>
                       {area}
                     </option>
@@ -742,18 +805,26 @@ export function ServicesDirectory() {
                 ).map((option) => {
                   const active = minRating === option.value;
                   return (
-                    <button
+                    <motion.button
                       key={option.label}
                       type="button"
                       aria-pressed={active}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setMinRating(option.value)}
                       className={cn(
-                        "inline-flex cursor-pointer items-center justify-center gap-0.5 rounded-full py-1 text-[11px] font-semibold transition-colors tabular-nums",
+                        "relative z-[1] inline-flex cursor-pointer items-center justify-center gap-0.5 rounded-full py-1 text-[11px] font-semibold transition-colors tabular-nums",
                         active
-                          ? "bg-leaf-900 text-cream"
+                          ? "text-cream"
                           : "text-ink-2 hover:text-ink",
                       )}
                     >
+                      {active && (
+                        <motion.span
+                          layoutId="services-rating-pill"
+                          transition={APPLE_SPRING_SNAPPY}
+                          className="absolute inset-0 -z-[1] rounded-full bg-leaf-900 shadow-xs"
+                        />
+                      )}
                       <span>{option.label}</span>
                       {option.showStar && (
                         <Star
@@ -766,7 +837,7 @@ export function ServicesDirectory() {
                           aria-hidden="true"
                         />
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -784,15 +855,16 @@ export function ServicesDirectory() {
                   aria-label="Toggle available this week"
                   onClick={() => setAvailableThisWeek((prev) => !prev)}
                   className={cn(
-                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                    availableThisWeek ? "bg-leaf-700" : "bg-line-2",
+                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors",
+                    availableThisWeek
+                      ? "justify-end bg-leaf-700"
+                      : "justify-start bg-line-2",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "inline-block size-3.5 rounded-full bg-surface shadow-xs transition-transform",
-                      availableThisWeek ? "translate-x-4.5" : "translate-x-0.5",
-                    )}
+                  <motion.span
+                    layout
+                    transition={APPLE_SPRING_TACTILE}
+                    className="inline-block size-3.5 rounded-full bg-surface shadow-xs"
                   />
                 </button>
               </div>
@@ -808,15 +880,16 @@ export function ServicesDirectory() {
                   aria-label="Toggle verified only"
                   onClick={() => setVerifiedOnly((prev) => !prev)}
                   className={cn(
-                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                    verifiedOnly ? "bg-leaf-700" : "bg-line-2",
+                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors",
+                    verifiedOnly
+                      ? "justify-end bg-leaf-700"
+                      : "justify-start bg-line-2",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "inline-block size-3.5 rounded-full bg-surface shadow-xs transition-transform",
-                      verifiedOnly ? "translate-x-4.5" : "translate-x-0.5",
-                    )}
+                  <motion.span
+                    layout
+                    transition={APPLE_SPRING_TACTILE}
+                    className="inline-block size-3.5 rounded-full bg-surface shadow-xs"
                   />
                 </button>
               </div>
@@ -837,15 +910,16 @@ export function ServicesDirectory() {
                   aria-label="Toggle saved only"
                   onClick={() => setSavedOnly((prev) => !prev)}
                   className={cn(
-                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                    savedOnly ? "bg-leaf-700" : "bg-line-2",
+                    "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors",
+                    savedOnly
+                      ? "justify-end bg-leaf-700"
+                      : "justify-start bg-line-2",
                   )}
                 >
-                  <span
-                    className={cn(
-                      "inline-block size-3.5 rounded-full bg-surface shadow-xs transition-transform",
-                      savedOnly ? "translate-x-4.5" : "translate-x-0.5",
-                    )}
+                  <motion.span
+                    layout
+                    transition={APPLE_SPRING_TACTILE}
+                    className="inline-block size-3.5 rounded-full bg-surface shadow-xs"
                   />
                 </button>
               </div>
@@ -871,26 +945,50 @@ export function ServicesDirectory() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-[13px] text-mut tabular-nums">
-                  <span className="font-bold text-ink">
-                    {filteredProviders.length}
-                  </span>{" "}
-                  {filteredProviders.length === 1
-                    ? "verified provider"
-                    : "verified providers"}{" "}
-                  in Manchester
+                  {query.trim() ? (
+                    <>
+                      Showing{" "}
+                      <span className="font-bold text-ink">
+                        {filteredProviders.length}
+                      </span>{" "}
+                      {filteredProviders.length === 1 ? "result" : "results"}{" "}
+                      for{" "}
+                      <span className="font-semibold text-ink">
+                        &ldquo;{query.trim()}&rdquo;
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-ink">
+                        {filteredProviders.length}
+                      </span>{" "}
+                      {filteredProviders.length === 1
+                        ? "verified provider"
+                        : "verified providers"}{" "}
+                      in Manchester
+                    </>
+                  )}
                 </p>
 
-                {activeChips.map((chip) => (
-                  <button
-                    key={chip.key}
-                    type="button"
-                    onClick={chip.onRemove}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-2.5 py-0.5 text-[11.5px] font-semibold text-leaf-800 transition-colors hover:bg-leaf-100"
-                  >
-                    <span>{chip.label}</span>
-                    <X className="size-3" strokeWidth={2} aria-hidden="true" />
-                  </button>
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {activeChips.map((chip) => (
+                    <motion.button
+                      key={chip.key}
+                      layout
+                      type="button"
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.88 }}
+                      transition={APPLE_SPRING_SNAPPY}
+                      whileTap={{ scale: 0.94 }}
+                      onClick={chip.onRemove}
+                      className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-2.5 py-0.5 text-[11.5px] font-semibold text-leaf-800 transition-colors hover:bg-leaf-100"
+                    >
+                      <span>{chip.label}</span>
+                      <X className="size-3" strokeWidth={2} aria-hidden="true" />
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
 
                 {activeChips.length > 0 && (
                   <button
@@ -944,15 +1042,23 @@ export function ServicesDirectory() {
                 </button>
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <motion.div
+                variants={gridMotion.container}
+                initial="hidden"
+                animate="show"
+                className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+              >
                 {filteredProviders.map((provider) => {
                   const Watermark = CATEGORY_ICONS[provider.categorySlug];
                   const isSaved = savedIds.has(provider.id);
 
                   return (
-                    <article
+                    <motion.article
                       key={provider.id}
-                      className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-lift"
+                      layout="position"
+                      variants={gridMotion.item}
+                      {...gridMotion.cardProps}
+                      className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
                     >
                       {/* Signature Servyn Patterned Header (exact match to homepage cards) */}
                       <div className="relative h-[108px] overflow-hidden">
@@ -997,8 +1103,9 @@ export function ServicesDirectory() {
                           />
                         </Link>
 
-                        <button
+                        <motion.button
                           type="button"
+                          whileTap={{ scale: 0.88 }}
                           aria-pressed={isSaved}
                           aria-label={
                             isSaved
@@ -1013,12 +1120,14 @@ export function ServicesDirectory() {
                               : "bg-leaf-950/35 text-cream/85 hover:bg-leaf-950/55 hover:text-cream",
                           )}
                         >
-                          <Heart
-                            className={cn("size-4", isSaved && "fill-red")}
-                            strokeWidth={1.85}
-                            aria-hidden="true"
-                          />
-                        </button>
+                          <HeartPulse active={isSaved}>
+                            <Heart
+                              className={cn("size-4", isSaved && "fill-red")}
+                              strokeWidth={1.85}
+                              aria-hidden="true"
+                            />
+                          </HeartPulse>
+                        </motion.button>
                       </div>
 
                       {/* Card Body (exact match to homepage card density & size) */}
@@ -1107,10 +1216,10 @@ export function ServicesDirectory() {
                           </Link>
                         </div>
                       </div>
-                    </article>
+                    </motion.article>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
           </div>
         </div>

@@ -14,93 +14,39 @@ import {
   Utensils,
   type LucideIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
+import {
+  HeartPulse,
+  ScrollReveal,
+  useStaggerMotion,
+} from "@/components/ui/motion";
+import type {
+  ServiceCategorySlug,
+  ServiceProvider,
+} from "@/lib/data/services";
 import { cn } from "@/lib/utils";
 
-interface ProviderItem {
-  id: string;
-  slug: string;
-  initials: string;
-  name: string;
-  location: string;
-  rating: string;
-  reviews: number;
-  tags: ReadonlyArray<string>;
-  price: string;
-  banner: string;
-  badgeClass: string;
-  watermark: LucideIcon;
-  defaultSaved?: boolean;
-}
-
-const PROVIDERS: ReadonlyArray<ProviderItem> = [
-  {
-    id: "amara",
-    slug: "amara-hair-beauty",
-    initials: "AH",
-    name: "Amara Hair & Beauty",
-    location: "Hulme · 0.4 mi · Hair & Braiding",
-    rating: "4.9",
-    reviews: 127,
-    tags: ["Knotless braids", "Silk press"],
-    price: "£35",
-    banner: "linear-gradient(135deg, #B88628 0%, #4E4D1F 58%, #163022 100%)",
-    badgeClass: "bg-gold-600/80",
-    watermark: Scissors,
-  },
-  {
-    id: "adunni",
-    slug: "adunni-alterations",
-    initials: "AF",
-    name: "Adunni Fashion House",
-    location: "Cheetham Hill · 2.3 mi · Fashion & Tailoring",
-    rating: "4.9",
-    reviews: 76,
-    tags: ["Ankara dresses", "Agbada"],
-    price: "£25",
-    banner: "linear-gradient(135deg, #743E91 0%, #3E2A5E 58%, #162925 100%)",
-    badgeClass: "bg-lav-d/80",
-    watermark: Shirt,
-  },
-  {
-    id: "zuri",
-    slug: "zuri-glow-skin-studio",
-    initials: "ZG",
-    name: "Zuri Glow Skin Studio",
-    location: "Chorlton · 3.2 mi · Beauty & Skincare",
-    rating: "4.9",
-    reviews: 112,
-    tags: ["Deep cleanse facial", "Shea rituals"],
-    price: "£18",
-    banner: "linear-gradient(135deg, #B44825 0%, #5F331E 58%, #1E251F 100%)",
-    badgeClass: "bg-blush-d/80",
-    watermark: Sparkles,
-    defaultSaved: true,
-  },
-  {
-    id: "kofi",
-    slug: "kofis-kitchen",
-    initials: "KK",
-    name: "Kofi's Kitchen",
-    location: "Moss Side · 1.1 mi · Food & Catering",
-    rating: "4.8",
-    reviews: 94,
-    tags: ["Party jollof", "Small chops"],
-    price: "£18",
-    banner: "linear-gradient(135deg, #277958 0%, #154B36 58%, #0C2B1F 100%)",
-    badgeClass: "bg-leaf-700/85",
-    watermark: Utensils,
-  },
-];
+const CATEGORY_WATERMARK: Partial<Record<ServiceCategorySlug, LucideIcon>> = {
+  "hair-beauty": Scissors,
+  "barbering-grooming": Scissors,
+  "fashion-tailoring": Shirt,
+  "catering-food": Utensils,
+};
 
 const STARS = [0, 1, 2, 3, 4] as const;
 
-export function CommunityFavouritesSection() {
+export function CommunityFavouritesSection({
+  providers,
+}: {
+  providers: ReadonlyArray<ServiceProvider>;
+}) {
+  const { container, item, cardProps } = useStaggerMotion(0.055);
   const [savedIds, setSavedIds] = React.useState<Set<string>>(
     () =>
       new Set(
-        PROVIDERS.filter((provider) => provider.defaultSaved).map(
-          (provider) => provider.id,
-        ),
+        providers
+          .filter((provider) => provider.defaultSaved)
+          .map((provider) => provider.id),
       ),
   );
 
@@ -122,7 +68,7 @@ export function CommunityFavouritesSection() {
       aria-labelledby="favourites-heading"
       className="mx-auto w-full max-w-[1240px] px-6 py-10 lg:px-8"
     >
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+      <ScrollReveal className="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-600">
             <span
@@ -141,30 +87,43 @@ export function CommunityFavouritesSection() {
 
         <Link
           href="/services"
-          className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-leaf-700 transition-colors hover:text-leaf-900"
+          className="group inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-leaf-700 transition-colors hover:text-leaf-900"
         >
           <span>View all</span>
-          <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden="true" />
+          <ArrowRight
+            className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
         </Link>
-      </div>
+      </ScrollReveal>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {PROVIDERS.map((provider) => {
-          const Watermark = provider.watermark;
+      <motion.div
+        variants={container}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.12 }}
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {providers.map((provider) => {
+          const Watermark =
+            CATEGORY_WATERMARK[provider.categorySlug] ?? Sparkles;
           const isSaved = savedIds.has(provider.id);
 
           return (
-            <article
+            <motion.article
               key={provider.id}
-              className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-lift"
+              variants={item}
+              {...cardProps}
+              className="flex flex-col overflow-hidden rounded-[18px] border border-line bg-surface shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
             >
               <div className="relative h-[108px] overflow-hidden">
                 <Link
-                  href={`/services/${provider.slug}`}
+                  href={`/services/${provider.id}`}
                   aria-label={`View ${provider.name}`}
                   className="block size-full"
                   style={{
-                    backgroundImage: `var(--sv-diamond-pattern), ${provider.banner}`,
+                    backgroundImage: `var(--sv-diamond-pattern), ${provider.bannerVar}`,
                   }}
                 >
                   <Watermark
@@ -176,7 +135,7 @@ export function CommunityFavouritesSection() {
                   <div
                     className={cn(
                       "absolute bottom-2.5 left-4 z-[2] flex size-11 items-center justify-center rounded-[12px] border-2 border-cream/85 font-serif text-[16px] font-bold text-cream shadow-sm",
-                      provider.badgeClass,
+                      provider.avatarColorClass,
                     )}
                   >
                     {provider.initials}
@@ -189,8 +148,9 @@ export function CommunityFavouritesSection() {
                   />
                 </Link>
 
-                <button
+                <motion.button
                   type="button"
+                  whileTap={{ scale: 0.88 }}
                   aria-pressed={isSaved}
                   aria-label={
                     isSaved
@@ -205,16 +165,18 @@ export function CommunityFavouritesSection() {
                       : "bg-leaf-950/35 text-cream/85 hover:bg-leaf-950/55 hover:text-cream",
                   )}
                 >
-                  <Heart
-                    className={cn("size-4", isSaved && "fill-red")}
-                    strokeWidth={1.85}
-                    aria-hidden="true"
-                  />
-                </button>
+                  <HeartPulse active={isSaved}>
+                    <Heart
+                      className={cn("size-4", isSaved && "fill-red")}
+                      strokeWidth={1.85}
+                      aria-hidden="true"
+                    />
+                  </HeartPulse>
+                </motion.button>
               </div>
 
               <div className="flex flex-1 flex-col p-4 pt-3.5">
-                <Link href={`/services/${provider.slug}`} className="group">
+                <Link href={`/services/${provider.id}`} className="group">
                   <h3 className="font-serif text-[16px] font-semibold text-ink transition-colors group-hover:text-leaf-700">
                     {provider.name}
                   </h3>
@@ -224,7 +186,10 @@ export function CommunityFavouritesSection() {
                       strokeWidth={1.75}
                       aria-hidden="true"
                     />
-                    <span className="truncate">{provider.location}</span>
+                    <span className="truncate">
+                      {provider.area} · {provider.distance} ·{" "}
+                      {provider.categoryLabel}
+                    </span>
                   </p>
                 </Link>
 
@@ -238,7 +203,9 @@ export function CommunityFavouritesSection() {
                     ))}
                   </div>
                   <p className="text-[12.5px] tabular-nums">
-                    <span className="font-bold text-ink">{provider.rating}</span>{" "}
+                    <span className="font-bold text-ink">
+                      {provider.rating.toFixed(1)}
+                    </span>{" "}
                     <span className="text-mut">({provider.reviews})</span>
                   </p>
                 </div>
@@ -258,11 +225,11 @@ export function CommunityFavouritesSection() {
                   <p className="text-[12.5px] text-mut tabular-nums">
                     from{" "}
                     <span className="font-serif text-[16px] font-bold text-ink">
-                      {provider.price}
+                      £{provider.startingPrice}
                     </span>
                   </p>
                   <Link
-                    href={`/services/${provider.slug}`}
+                    href={`/services/${provider.id}`}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3.5 py-1.5 text-[13px] font-bold text-gold-ink shadow-sm transition-transform hover:brightness-[1.03] active:scale-[0.97]"
                   >
                     <Calendar
@@ -274,10 +241,10 @@ export function CommunityFavouritesSection() {
                   </Link>
                 </div>
               </div>
-            </article>
+            </motion.article>
           );
         })}
-      </div>
+      </motion.div>
     </section>
   );
 }

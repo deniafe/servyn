@@ -16,7 +16,13 @@ import {
   ShieldCheck,
   Star,
 } from "lucide-react";
-import type { ServiceProvider } from "@/lib/mock-services";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  APPLE_SPRING_SNAPPY,
+  HeartPulse,
+  useRevealMotion,
+} from "@/components/ui/motion";
+import type { ServiceProvider } from "@/lib/data/services";
 import { cn } from "@/lib/utils";
 
 const STARS = [0, 1, 2, 3, 4] as const;
@@ -30,6 +36,8 @@ export function ServiceProviderDetail({
 }: {
   provider: ServiceProvider;
 }) {
+  const reduce = useReducedMotion();
+  const headerReveal = useRevealMotion();
   const defaultDayId =
     provider.availability.find((day) => day.freeCount > 0)?.id ??
     provider.availability[0]?.id ??
@@ -123,7 +131,8 @@ export function ServiceProviderDetail({
       </nav>
 
       {/* Top Provider Summary Card */}
-      <section
+      <motion.section
+        {...headerReveal}
         aria-label="Provider summary"
         className="mt-4 overflow-hidden rounded-[22px] border border-line bg-surface shadow-soft"
       >
@@ -227,8 +236,9 @@ export function ServiceProviderDetail({
           </div>
 
           <div className="flex shrink-0 items-center gap-2.5 self-start sm:self-center">
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.9 }}
               aria-pressed={isSaved}
               aria-label={
                 isSaved
@@ -243,15 +253,18 @@ export function ServiceProviderDetail({
                   : "border-line-2 bg-surface text-mut hover:border-leaf-700 hover:text-red",
               )}
             >
-              <Heart
-                className={cn("size-4.5", isSaved && "fill-red")}
-                strokeWidth={1.85}
-                aria-hidden="true"
-              />
-            </button>
+              <HeartPulse active={isSaved}>
+                <Heart
+                  className={cn("size-4.5", isSaved && "fill-red")}
+                  strokeWidth={1.85}
+                  aria-hidden="true"
+                />
+              </HeartPulse>
+            </motion.button>
 
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.96 }}
               aria-expanded={messageOpen}
               onClick={() => {
                 setMessageOpen((prev) => !prev);
@@ -265,57 +278,68 @@ export function ServiceProviderDetail({
                 aria-hidden="true"
               />
               <span>Message</span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
         {/* Inline Message Panel */}
-        {messageOpen && (
-          <div className="border-t border-line bg-surface-2/80 px-6 py-4">
-            {messageSent ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
-                <p className="inline-flex items-center gap-2 font-medium text-leaf-800">
-                  <CheckCircle2
-                    className="size-4 text-leaf-600"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    Message sent to {provider.name} — usually responds{" "}
-                    {provider.responseTime.replace("Replies ", "within ")}.
-                  </span>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setMessageSent(false)}
-                  className="cursor-pointer text-[12.5px] font-semibold text-leaf-700 underline underline-offset-4 hover:text-leaf-900"
-                >
-                  Send another note
-                </button>
+        <AnimatePresence initial={false}>
+          {messageOpen && (
+            <motion.div
+              initial={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
+              transition={APPLE_SPRING_SNAPPY}
+              className="overflow-hidden border-t border-line bg-surface-2/80"
+            >
+              <div className="px-6 py-4">
+                {messageSent ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
+                    <p className="inline-flex items-center gap-2 font-medium text-leaf-800">
+                      <CheckCircle2
+                        className="size-4 text-leaf-600"
+                        aria-hidden="true"
+                      />
+                      <span>
+                        Message sent to {provider.name} — usually responds{" "}
+                        {provider.responseTime.replace("Replies ", "within ")}.
+                      </span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMessageSent(false)}
+                      className="cursor-pointer text-[12.5px] font-semibold text-leaf-700 underline underline-offset-4 hover:text-leaf-900"
+                    >
+                      Send another note
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="flex flex-col gap-2.5 sm:flex-row sm:items-center"
+                  >
+                    <input
+                      type="text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder={`Ask ${provider.name} about availability, dietary options, or custom requests…`}
+                      aria-label={`Message ${provider.name}`}
+                      className="min-w-0 flex-1 rounded-full border border-line-2 bg-surface px-4 py-2 text-[13.5px] text-ink placeholder:text-mut focus:border-leaf-700 focus:outline-none"
+                    />
+                    <motion.button
+                      type="submit"
+                      whileTap={{ scale: 0.96 }}
+                      className="shrink-0 cursor-pointer rounded-full bg-leaf-900 px-5 py-2 text-[13px] font-semibold text-cream transition-colors hover:bg-leaf-800"
+                    >
+                      Send enquiry
+                    </motion.button>
+                  </form>
+                )}
               </div>
-            ) : (
-              <form
-                onSubmit={handleSendMessage}
-                className="flex flex-col gap-2.5 sm:flex-row sm:items-center"
-              >
-                <input
-                  type="text"
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  placeholder={`Ask ${provider.name} about availability, dietary options, or custom requests…`}
-                  aria-label={`Message ${provider.name}`}
-                  className="min-w-0 flex-1 rounded-full border border-line-2 bg-surface px-4 py-2 text-[13.5px] text-ink placeholder:text-mut focus:border-leaf-700 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 cursor-pointer rounded-full bg-leaf-900 px-5 py-2 text-[13px] font-semibold text-cream transition-colors hover:bg-leaf-800"
-                >
-                  Send enquiry
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-      </section>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.section>
 
       {/* Main 2-Column Content & Sticky Booking Sidebar */}
       <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_360px]">
@@ -470,21 +494,29 @@ export function ServiceProviderDetail({
                 const isUnavailable = day.freeCount === 0;
 
                 return (
-                  <button
+                  <motion.button
                     key={day.id}
                     type="button"
                     disabled={isUnavailable}
                     aria-pressed={isSelected}
+                    whileTap={isUnavailable ? undefined : { scale: 0.95 }}
                     onClick={() => handleSelectDay(day.id)}
                     className={cn(
-                      "flex min-w-[66px] shrink-0 flex-col items-center rounded-[14px] border px-2.5 py-2.5 text-center transition-colors",
+                      "relative z-[1] flex min-w-[66px] shrink-0 flex-col items-center rounded-[14px] border px-2.5 py-2.5 text-center transition-colors",
                       isUnavailable
                         ? "cursor-not-allowed border-line/70 bg-surface-2/60 text-mut/50"
                         : isSelected
-                          ? "cursor-pointer border-gold-500 bg-gold-50 text-ink shadow-xs ring-1 ring-gold-400/50"
+                          ? "cursor-pointer border-transparent text-ink"
                           : "cursor-pointer border-line bg-surface text-ink hover:border-leaf-700",
                     )}
                   >
+                    {isSelected && (
+                      <motion.span
+                        layoutId="availability-day-ring"
+                        transition={APPLE_SPRING_SNAPPY}
+                        className="absolute inset-0 -z-[1] rounded-[14px] border border-gold-500 bg-gold-50 shadow-xs ring-1 ring-gold-400/50"
+                      />
+                    )}
                     <span className="text-[10.5px] font-bold tracking-[0.06em] uppercase text-mut">
                       {day.weekday}
                     </span>
@@ -499,7 +531,7 @@ export function ServiceProviderDetail({
                     >
                       {day.freeCount === 0 ? "—" : `${day.freeCount} free`}
                     </span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -514,34 +546,44 @@ export function ServiceProviderDetail({
 
             {/* Time slot selector buttons */}
             {activeDay && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {activeDay.slots.map((slot) => {
-                  const isChosen = selectedTime === slot.time;
-                  return (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      disabled={!slot.available}
-                      aria-pressed={isChosen}
-                      onClick={() => {
-                        setSelectedTime(slot.time);
-                        setBookingConfirmed(false);
-                        setBookingHint(null);
-                      }}
-                      className={cn(
-                        "min-w-[82px] rounded-[11px] border px-3.5 py-2 text-[13px] font-semibold transition-colors tabular-nums",
-                        !slot.available
-                          ? "cursor-not-allowed border-line/60 bg-surface-2/60 text-mut/45 line-through"
-                          : isChosen
-                            ? "cursor-pointer border-leaf-900 bg-leaf-900 text-cream shadow-xs"
-                            : "cursor-pointer border-line-2 bg-surface text-ink hover:border-leaf-700 hover:bg-surface-2",
-                      )}
-                    >
-                      {slot.time}
-                    </button>
-                  );
-                })}
-              </div>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeDay.id}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  className="mt-4 flex flex-wrap gap-2"
+                >
+                  {activeDay.slots.map((slot) => {
+                    const isChosen = selectedTime === slot.time;
+                    return (
+                      <motion.button
+                        key={slot.time}
+                        type="button"
+                        disabled={!slot.available}
+                        aria-pressed={isChosen}
+                        whileTap={slot.available ? { scale: 0.94 } : undefined}
+                        onClick={() => {
+                          setSelectedTime(slot.time);
+                          setBookingConfirmed(false);
+                          setBookingHint(null);
+                        }}
+                        className={cn(
+                          "min-w-[82px] rounded-[11px] border px-3.5 py-2 text-[13px] font-semibold transition-colors tabular-nums",
+                          !slot.available
+                            ? "cursor-not-allowed border-line/60 bg-surface-2/60 text-mut/45 line-through"
+                            : isChosen
+                              ? "cursor-pointer border-leaf-900 bg-leaf-900 text-cream shadow-xs"
+                              : "cursor-pointer border-line-2 bg-surface text-ink hover:border-leaf-700 hover:bg-surface-2",
+                        )}
+                      >
+                        {slot.time}
+                      </motion.button>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
             )}
 
             <p className="mt-4 flex items-center gap-1.5 text-[12px] text-mut">
@@ -668,8 +710,16 @@ export function ServiceProviderDetail({
                         />
                       </span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
-                        <div
-                          className="h-full rounded-full bg-linear-to-r from-grad-gold-1 to-grad-gold-2"
+                        <motion.div
+                          initial={reduce ? false : { scaleX: 0 }}
+                          whileInView={{ scaleX: 1 }}
+                          viewport={{ once: true, amount: 0.2 }}
+                          transition={{
+                            type: "spring",
+                            bounce: 0,
+                            duration: 0.55,
+                          }}
+                          className="h-full origin-left rounded-full bg-linear-to-r from-grad-gold-1 to-grad-gold-2"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -745,8 +795,16 @@ export function ServiceProviderDetail({
             Book this provider
           </h2>
 
+          <AnimatePresence mode="wait" initial={false}>
           {bookingConfirmed && selectedOffering && activeDay && selectedTime ? (
-            <div className="mt-4">
+            <motion.div
+              key="confirmed"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              transition={APPLE_SPRING_SNAPPY}
+              className="mt-4"
+            >
               <div className="rounded-[16px] border border-leaf-400/35 bg-leaf-950/60 p-4">
                 <p className="inline-flex items-center gap-2 text-[14px] font-bold text-gold-300">
                   <CheckCircle2
@@ -789,9 +847,15 @@ export function ServiceProviderDetail({
               >
                 Change service or slot
               </button>
-            </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div
+              key="selector"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              transition={APPLE_SPRING_SNAPPY}
+            >
               <div className="mt-4 flex flex-col gap-2.5 text-[13.5px]">
                 <button
                   type="button"
@@ -866,13 +930,14 @@ export function ServiceProviderDetail({
                 </p>
               )}
 
-              <button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.97 }}
                 onClick={handleBookAndPay}
                 className={cn(
-                  "mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[14.5px] font-bold transition-[transform,filter,background-color]",
+                  "mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[14.5px] font-bold transition-[filter,background-color]",
                   selectedOffering && selectedTime
-                    ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 text-gold-ink shadow-gold hover:brightness-[1.03] active:scale-[0.98]"
+                    ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 text-gold-ink shadow-gold hover:brightness-[1.03]"
                     : "bg-gold-500/45 text-gold-ink/85 hover:bg-gold-500/60",
                 )}
               >
@@ -882,9 +947,10 @@ export function ServiceProviderDetail({
                   strokeWidth={2}
                   aria-hidden="true"
                 />
-              </button>
-            </>
+              </motion.button>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           <div className="mt-5 flex flex-col gap-2.5 border-t border-cream-line pt-4 text-[12px] leading-relaxed text-cream-75">
             <p className="flex items-start gap-2">

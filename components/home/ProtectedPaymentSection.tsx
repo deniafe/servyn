@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -8,6 +10,8 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
+import { ScrollReveal, useStaggerMotion } from "@/components/ui/motion";
 
 interface PaymentStep {
   step: number;
@@ -44,6 +48,8 @@ const STEPS: ReadonlyArray<PaymentStep> = [
 ];
 
 export function ProtectedPaymentSection() {
+  const { container, item } = useStaggerMotion(0.06);
+
   return (
     <section
       id="protected-payments"
@@ -55,7 +61,7 @@ export function ProtectedPaymentSection() {
       }}
     >
       <div className="mx-auto w-full max-w-[1240px] px-6 py-16 lg:px-8 lg:py-20">
-        <div className="mb-9 flex flex-wrap items-end justify-between gap-4">
+        <ScrollReveal className="mb-9 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-400">
               <span
@@ -75,24 +81,35 @@ export function ProtectedPaymentSection() {
 
           <Link
             href="#how-it-works"
-            className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-gold-400 transition-colors hover:text-gold-300"
+            className="group inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-gold-400 transition-colors hover:text-gold-300"
           >
             <span>How disputes work</span>
             <ArrowRight
-              className="size-4"
+              className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={1.75}
               aria-hidden="true"
             />
           </Link>
-        </div>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((item) => {
-            const Icon = item.icon;
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.15 }}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {STEPS.map((step) => {
+            const Icon = step.icon;
             return (
-              <article
-                key={item.step}
-                className="flex flex-col rounded-[18px] border border-cream/10 bg-white/[0.03] p-6 transition-colors hover:border-gold-25 hover:bg-white/[0.05]"
+              <motion.article
+                key={step.step}
+                variants={item}
+                whileHover={{
+                  y: -3,
+                  transition: { type: "spring", bounce: 0, duration: 0.28 },
+                }}
+                className="flex flex-col rounded-[18px] border border-cream/10 bg-white/[0.03] p-6 transition-colors hover:border-gold-25 hover:bg-white/[0.055]"
               >
                 <div className="mb-5 flex items-start justify-between gap-3">
                   <span className="flex size-10 items-center justify-center rounded-[12px] border border-gold-25 bg-gold-15 text-gold-400">
@@ -106,20 +123,20 @@ export function ProtectedPaymentSection() {
                     aria-hidden="true"
                     className="font-serif text-[32px] leading-none font-normal text-cream/20 select-none tabular-nums"
                   >
-                    {item.step}
+                    {step.step}
                   </span>
                 </div>
 
                 <h3 className="text-[15.5px] font-semibold text-gold-300">
-                  {item.title}
+                  {step.title}
                 </h3>
                 <p className="mt-2 text-[13.5px] leading-[1.55] text-cream-75">
-                  {item.body}
+                  {step.body}
                 </p>
-              </article>
+              </motion.article>
             );
           })}
-        </div>
+        </motion.div>
 
         <p className="mt-7 flex items-start gap-2 text-[12px] leading-[1.55] text-cream-60">
           <Info

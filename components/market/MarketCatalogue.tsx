@@ -15,13 +15,17 @@ import {
   Truck,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCart } from "@/components/home/CartProvider";
 import { MarketProductIllustration } from "@/components/market/MarketProductIllustration";
 import {
+  APPLE_SPRING_SNAPPY,
+  useRevealMotion,
+  useStaggerMotion,
+} from "@/components/ui/motion";
+import {
   FREE_DELIVERY_THRESHOLD,
   formatGBP,
-  MARKET_CATEGORIES,
-  MARKET_PRODUCTS,
   type MarketCategory,
   type MarketProduct,
   type MarketProductId,
@@ -36,7 +40,21 @@ type MarketSortOption =
   | "price-asc"
   | "price-desc";
 
-export function MarketCatalogue() {
+interface MarketCatalogueProps {
+  products: ReadonlyArray<MarketProduct>;
+  categories: ReadonlyArray<"All" | MarketCategory>;
+  initialQuery: string;
+  initialCategory: "All" | MarketCategory;
+  initialMode: PricingMode;
+}
+
+export function MarketCatalogue({
+  products,
+  categories,
+  initialQuery,
+  initialCategory,
+  initialMode,
+}: MarketCatalogueProps) {
   const {
     items,
     cartCount,
@@ -45,39 +63,18 @@ export function MarketCatalogue() {
     addToCart,
     updateQuantity,
   } = useCart();
-  const [pricingMode, setPricingMode] = React.useState<PricingMode>("retail");
-  const [query, setQuery] = React.useState("");
+  const reduce = useReducedMotion();
+  const mastheadReveal = useRevealMotion();
+  const gridMotion = useStaggerMotion(0.045);
+
+  const [pricingMode, setPricingMode] = React.useState<PricingMode>(initialMode);
+  const [query, setQuery] = React.useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = React.useState<
     "All" | MarketCategory
-  >("All");
+  >(initialCategory);
   const [sortBy, setSortBy] = React.useState<MarketSortOption>("featured");
   const [addedId, setAddedId] = React.useState<MarketProductId | null>(null);
   const timerRef = React.useRef<number | undefined>(undefined);
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const catParam = params.get("category");
-    const qParam = params.get("q");
-    const modeParam = params.get("mode");
-
-    if (!catParam && !qParam && !modeParam) return;
-
-    const frameId = window.requestAnimationFrame(() => {
-      if (
-        catParam &&
-        MARKET_CATEGORIES.includes(catParam as "All" | MarketCategory)
-      ) {
-        setSelectedCategory(catParam as "All" | MarketCategory);
-      }
-      if (qParam) {
-        setQuery(qParam);
-      }
-      if (modeParam === "retail" || modeParam === "bulk") {
-        setPricingMode(modeParam);
-      }
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, []);
 
   React.useEffect(() => {
     return () => window.clearTimeout(timerRef.current);
@@ -101,7 +98,8 @@ export function MarketCatalogue() {
     return haystack.includes(trimmedQuery);
   }
 
-  const queryMatching = MARKET_PRODUCTS.filter(matchesQuery);
+  const allCategories = categories;
+  const queryMatching = products.filter(matchesQuery);
 
   const filteredProducts = queryMatching
     .filter((product) => {
@@ -143,7 +141,7 @@ export function MarketCatalogue() {
       >
         <div className="mx-auto w-full max-w-[1240px] px-6 py-9 lg:px-8 lg:py-11">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
+            <motion.div {...mastheadReveal}>
               <h1 className="font-serif text-[clamp(2.25rem,4vw,3.3rem)] leading-[1.06] font-semibold tracking-[-0.025em] text-cream">
                 The{" "}
                 <em className="font-normal text-gold-400 italic">Market.</em>
@@ -153,55 +151,78 @@ export function MarketCatalogue() {
                 fulfilled directly by Manchester makers — retail for your home,
                 wholesale for your salon or shop.
               </p>
-            </div>
+            </motion.div>
 
             <div className="flex flex-col items-start lg:items-end">
               <div
                 role="group"
                 aria-label="Pricing tier"
-                className="inline-flex items-center gap-1 rounded-[14px] border border-cream/15 bg-leaf-950/60 p-1.5"
+                className="relative inline-flex items-center gap-1 rounded-[14px] border border-cream/15 bg-leaf-950/60 p-1.5"
               >
-                <button
+                <motion.button
                   type="button"
                   aria-pressed={pricingMode === "retail"}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => setPricingMode("retail")}
                   className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] px-4 py-2 text-[12.5px] font-semibold transition-colors",
+                    "relative z-[1] inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] px-4 py-2 text-[12.5px] font-semibold transition-colors",
                     pricingMode === "retail"
-                      ? "bg-surface text-ink shadow-sm"
-                      : "text-cream-85 hover:bg-cream/10 hover:text-cream",
+                      ? "text-ink"
+                      : "text-cream-85 hover:text-cream",
                   )}
                 >
+                  {pricingMode === "retail" && (
+                    <motion.span
+                      layoutId="market-pricing-pill"
+                      transition={APPLE_SPRING_SNAPPY}
+                      className="absolute inset-0 -z-[1] rounded-[10px] bg-surface shadow-sm"
+                    />
+                  )}
                   <ShoppingBag className="size-3.5" aria-hidden="true" />
                   <span>Retail</span>
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   type="button"
                   aria-pressed={pricingMode === "bulk"}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => setPricingMode("bulk")}
                   className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] px-4 py-2 text-[12.5px] font-semibold transition-colors",
+                    "relative z-[1] inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] px-4 py-2 text-[12.5px] font-semibold transition-colors",
                     pricingMode === "bulk"
-                      ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 font-bold text-gold-ink shadow-sm"
-                      : "text-cream-85 hover:bg-cream/10 hover:text-cream",
+                      ? "font-bold text-gold-ink"
+                      : "text-cream-85 hover:text-cream",
                   )}
                 >
+                  {pricingMode === "bulk" && (
+                    <motion.span
+                      layoutId="market-pricing-pill"
+                      transition={APPLE_SPRING_SNAPPY}
+                      className="absolute inset-0 -z-[1] rounded-[10px] bg-linear-to-b from-grad-gold-1 to-grad-gold-2 shadow-sm"
+                    />
+                  )}
                   <Boxes className="size-3.5" aria-hidden="true" />
                   <span>Bulk / Wholesale</span>
-                </button>
+                </motion.button>
               </div>
-              <p
-                className={cn(
-                  "mt-2 text-[12px] lg:text-right",
-                  pricingMode === "bulk"
-                    ? "font-semibold text-gold-300"
-                    : "text-cream-75",
-                )}
-              >
-                {pricingMode === "bulk"
-                  ? "Trade pricing active — save 24%–31% with seller minimum packs."
-                  : "Switch to Bulk / Wholesale to save up to 31% on trade orders."}
-              </p>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.p
+                  key={pricingMode}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  className={cn(
+                    "mt-2 text-[12px] lg:text-right",
+                    pricingMode === "bulk"
+                      ? "font-semibold text-gold-300"
+                      : "text-cream-75",
+                  )}
+                >
+                  {pricingMode === "bulk"
+                    ? "Trade pricing active — save 24%–31% with seller minimum packs."
+                    : "Switch to Bulk / Wholesale to save up to 31% on trade orders."}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -245,7 +266,7 @@ export function MarketCatalogue() {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            {MARKET_CATEGORIES.map((category) => {
+            {allCategories.map((category) => {
               const isSelected = selectedCategory === category;
               const count =
                 category === "All"
@@ -253,18 +274,26 @@ export function MarketCatalogue() {
                   : queryMatching.filter((p) => p.category === category).length;
 
               return (
-                <button
+                <motion.button
                   key={category}
                   type="button"
                   aria-pressed={isSelected}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setSelectedCategory(category)}
                   className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors",
+                    "relative z-[1] inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors",
                     isSelected
-                      ? "border-leaf-900 bg-leaf-900 text-cream"
+                      ? "border-transparent text-cream"
                       : "border-line-2 bg-surface text-ink-2 hover:border-leaf-700",
                   )}
                 >
+                  {isSelected && (
+                    <motion.span
+                      layoutId="market-category-pill"
+                      transition={APPLE_SPRING_SNAPPY}
+                      className="absolute inset-0 -z-[1] rounded-full bg-leaf-900 shadow-xs"
+                    />
+                  )}
                   <span>{category}</span>
                   <span
                     className={cn(
@@ -276,7 +305,7 @@ export function MarketCatalogue() {
                   >
                     {count}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -399,7 +428,12 @@ export function MarketCatalogue() {
             </button>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <motion.div
+            variants={gridMotion.container}
+            initial="hidden"
+            animate="show"
+            className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+          >
             {filteredProducts.map((product) => {
               const isJustAdded = addedId === product.id;
               const displayedPrice =
@@ -419,9 +453,12 @@ export function MarketCatalogue() {
                   : -1;
 
               return (
-                <article
+                <motion.article
                   key={product.id}
-                  className="group flex flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-soft transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-line-2 hover:shadow-lift"
+                  layout="position"
+                  variants={gridMotion.item}
+                  {...gridMotion.cardProps}
+                  className="group flex flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
                 >
                   {/* Editorial Product Plinth */}
                   <div className="relative flex aspect-[4/3.35] items-center justify-center overflow-hidden border-b border-line/70 bg-linear-to-b from-surface-2 via-gold-50/70 to-butter/55 p-5">
@@ -481,93 +518,126 @@ export function MarketCatalogue() {
                     <div className="mt-auto pt-3.5">
                       <div className="flex items-center justify-between gap-2 border-t border-line pt-3">
                         <div className="min-w-0">
-                          <div className="flex items-baseline gap-1.5 tabular-nums">
-                            <span className="font-serif text-[17px] font-bold text-ink">
-                              {formatGBP(displayedPrice)}
-                            </span>
-                            {pricingMode === "bulk" ? (
-                              <span className="text-[11.5px] text-mut line-through">
-                                {formatGBP(product.retailPrice)}
-                              </span>
-                            ) : (
-                              <span className="text-[11.5px] text-mut">
-                                each
-                              </span>
-                            )}
-                          </div>
-                          {pricingMode === "bulk" && (
-                            <p className="text-[11px] font-semibold text-leaf-700 tabular-nums">
-                              Min. {product.bulkMinQty} units
-                            </p>
-                          )}
+                          <AnimatePresence mode="wait" initial={false}>
+                            <motion.div
+                              key={pricingMode}
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                              transition={{ duration: 0.16 }}
+                            >
+                              <div className="flex items-baseline gap-1.5 tabular-nums">
+                                <span className="font-serif text-[17px] font-bold text-ink">
+                                  {formatGBP(displayedPrice)}
+                                </span>
+                                {pricingMode === "bulk" ? (
+                                  <span className="text-[11.5px] text-mut line-through">
+                                    {formatGBP(product.retailPrice)}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11.5px] text-mut">
+                                    each
+                                  </span>
+                                )}
+                              </div>
+                              {pricingMode === "bulk" && (
+                                <p className="text-[11px] font-semibold text-leaf-700 tabular-nums">
+                                  Min. {product.bulkMinQty} units
+                                </p>
+                              )}
+                            </motion.div>
+                          </AnimatePresence>
                         </div>
 
-                        {existingItem ? (
-                          <div className="inline-flex h-8 shrink-0 items-center rounded-full border border-leaf-700/25 bg-leaf-50 p-0.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateQuantity(lineKey, decrementDelta)
-                              }
-                              aria-label={`Decrease quantity of ${product.name}`}
-                              className="flex size-7 cursor-pointer items-center justify-center rounded-full text-leaf-900 transition-colors hover:bg-leaf-100"
+                        <AnimatePresence mode="wait" initial={false}>
+                          {existingItem ? (
+                            <motion.div
+                              key="stepper"
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                              transition={APPLE_SPRING_SNAPPY}
+                              className="inline-flex h-8 shrink-0 items-center rounded-full border border-leaf-700/25 bg-leaf-50 p-0.5"
                             >
-                              <Minus className="size-3" strokeWidth={2.25} />
-                            </button>
-                            <span className="min-w-6 text-center text-[12.5px] font-bold text-ink tabular-nums">
-                              {existingItem.quantity}
-                            </span>
-                            <button
+                              <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.85 }}
+                                onClick={() =>
+                                  updateQuantity(lineKey, decrementDelta)
+                                }
+                                aria-label={`Decrease quantity of ${product.name}`}
+                                className="flex size-7 cursor-pointer items-center justify-center rounded-full text-leaf-900 transition-colors hover:bg-leaf-100"
+                              >
+                                <Minus className="size-3" strokeWidth={2.25} />
+                              </motion.button>
+                              <motion.span
+                                key={existingItem.quantity}
+                                initial={reduce ? false : { scale: 0.8, opacity: 0.6 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={APPLE_SPRING_SNAPPY}
+                                className="min-w-6 text-center text-[12.5px] font-bold text-ink tabular-nums"
+                              >
+                                {existingItem.quantity}
+                              </motion.span>
+                              <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.85 }}
+                                onClick={() => updateQuantity(lineKey, 1)}
+                                aria-label={`Increase quantity of ${product.name}`}
+                                className="flex size-7 cursor-pointer items-center justify-center rounded-full text-leaf-900 transition-colors hover:bg-leaf-100"
+                              >
+                                <Plus className="size-3" strokeWidth={2.25} />
+                              </motion.button>
+                            </motion.div>
+                          ) : (
+                            <motion.button
+                              key="add"
                               type="button"
-                              onClick={() => updateQuantity(lineKey, 1)}
-                              aria-label={`Increase quantity of ${product.name}`}
-                              className="flex size-7 cursor-pointer items-center justify-center rounded-full text-leaf-900 transition-colors hover:bg-leaf-100"
+                              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                              transition={APPLE_SPRING_SNAPPY}
+                              whileTap={{ scale: 0.93 }}
+                              onClick={() => handleQuickAdd(product)}
+                              aria-label={`Add ${product.name} to basket`}
+                              className={cn(
+                                "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors",
+                                isJustAdded
+                                  ? "bg-gold-500 text-gold-ink"
+                                  : "bg-leaf-900 text-cream hover:bg-leaf-800",
+                              )}
                             >
-                              <Plus className="size-3" strokeWidth={2.25} />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleQuickAdd(product)}
-                            aria-label={`Add ${product.name} to basket`}
-                            className={cn(
-                              "inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors active:scale-95",
-                              isJustAdded
-                                ? "bg-gold-500 text-gold-ink"
-                                : "bg-leaf-900 text-cream hover:bg-leaf-800",
-                            )}
-                          >
-                            {isJustAdded ? (
-                              <>
-                                <Check
-                                  className="size-3.5"
-                                  strokeWidth={2.25}
-                                  aria-hidden="true"
-                                />
-                                <span>Added</span>
-                              </>
-                            ) : (
-                              <>
-                                <Plus
-                                  className="size-3.5"
-                                  strokeWidth={2}
-                                  aria-hidden="true"
-                                />
-                                <span>
-                                  {pricingMode === "bulk" ? "Add pack" : "Add"}
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        )}
+                              {isJustAdded ? (
+                                <>
+                                  <Check
+                                    className="size-3.5"
+                                    strokeWidth={2.25}
+                                    aria-hidden="true"
+                                  />
+                                  <span>Added</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus
+                                    className="size-3.5"
+                                    strokeWidth={2}
+                                    aria-hidden="true"
+                                  />
+                                  <span>
+                                    {pricingMode === "bulk" ? "Add pack" : "Add"}
+                                  </span>
+                                </>
+                              )}
+                            </motion.button>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                   </div>
-                </article>
+                </motion.article>
               );
             })}
-          </div>
+          </motion.div>
         )}
       </div>
 

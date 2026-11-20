@@ -1,22 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-type SearchMode = "auto" | "ai" | "kw";
+type SearchMode = "auto" | "ai" | "keyword";
 
 const SEARCH_MODES: ReadonlyArray<{ id: SearchMode; label: string }> = [
   { id: "auto", label: "Auto" },
   { id: "ai", label: "AI Match" },
-  { id: "kw", label: "Keyword" },
+  { id: "keyword", label: "Keyword" },
 ];
 
 const MODE_LABELS: Record<SearchMode, string> = {
   auto: "Auto",
   ai: "AI Match",
-  kw: "Keyword",
+  keyword: "Keyword",
 };
 
 const POPULAR_SEARCHES = [
@@ -27,20 +28,32 @@ const POPULAR_SEARCHES = [
 ] as const;
 
 export function HeroSearch() {
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const [query, setQuery] = React.useState("");
   const [mode, setMode] = React.useState<SearchMode>("auto");
   const [isFocused, setIsFocused] = React.useState(false);
-  const [submitted, setSubmitted] = React.useState<{
+  const [pending, setPending] = React.useState<{
     query: string;
     mode: SearchMode;
   } | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  function runSearch(term: string, searchMode: SearchMode) {
+    const params = new URLSearchParams();
+    params.set("q", term);
+    if (searchMode !== "auto") {
+      params.set("mode", searchMode);
+    }
+    // Zero-latency navigation — show instant status feedback while the services
+    // route streams its Suspense skeleton and filtered results.
+    setPending({ query: term, mode: searchMode });
+    router.push(`/services?${params.toString()}`);
+  }
+
   function handleSuggestionClick(suggestion: string) {
     setQuery(suggestion);
-    setSubmitted(null);
-    inputRef.current?.focus();
+    runSearch(suggestion, mode);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -50,7 +63,7 @@ export function HeroSearch() {
       inputRef.current?.focus();
       return;
     }
-    setSubmitted({ query: trimmed, mode });
+    runSearch(trimmed, mode);
   }
 
   return (
@@ -68,7 +81,7 @@ export function HeroSearch() {
           "flex w-full max-w-[600px] flex-wrap items-center gap-2 rounded-[16px] border border-cream/10 bg-surface p-2 transition-[box-shadow,ring-color] duration-200 ease-standard min-[640px]:flex-nowrap",
           isFocused
             ? "shadow-[0_18px_44px_rgba(7,30,22,0.38)] ring-2 ring-gold-500/45"
-            : "shadow-[0_12px_32px_rgba(7,30,22,0.28)]"
+            : "shadow-[0_12px_32px_rgba(7,30,22,0.28)]",
         )}
       >
         <div className="flex min-w-0 flex-1 items-center gap-2 pl-2 max-[639px]:basis-full">
@@ -86,8 +99,28 @@ export function HeroSearch() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Knotless braids, jollof, Hulme"
             aria-label="Describe the service you need"
-            className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-2 text-[15px] font-normal text-ink placeholder:text-placeholder focus:outline-none"
+            className="min-w-0 flex-1 border-0 bg-transparent py-2 pr-1 text-[15px] font-normal text-ink placeholder:text-placeholder focus:outline-none"
           />
+
+          <AnimatePresence>
+            {query.length > 0 && (
+              <motion.button
+                type="button"
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear search query"
+                className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-surface-2 text-mut transition-colors hover:bg-line hover:text-ink"
+              >
+                <X className="size-3.5" strokeWidth={2} aria-hidden="true" />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         <div
@@ -107,7 +140,7 @@ export function HeroSearch() {
                 onClick={() => setMode(option.id)}
                 className={cn(
                   "relative z-[1] h-8 cursor-pointer rounded-[7px] px-2.5 text-[12px] font-medium whitespace-nowrap transition-colors duration-150 ease-standard",
-                  active ? "text-ink" : "text-mut hover:text-ink-2"
+                  active ? "text-ink" : "text-mut hover:text-ink-2",
                 )}
               >
                 {active && (
@@ -145,7 +178,7 @@ export function HeroSearch() {
               onClick={() => handleSuggestionClick(suggestion)}
               className={cn(
                 "cursor-pointer underline-offset-4 transition-colors duration-150 ease-standard hover:text-cream hover:underline",
-                isSelected && "text-cream underline"
+                isSelected && "text-cream underline",
               )}
             >
               {suggestion}
@@ -155,9 +188,10 @@ export function HeroSearch() {
       </div>
 
       <AnimatePresence>
-        {submitted && (
+        {pending && (
           <motion.div
             role="status"
+            aria-live="polite"
             initial={
               shouldReduceMotion
                 ? { opacity: 0 }
@@ -176,16 +210,28 @@ export function HeroSearch() {
             }
             className="mt-3 inline-flex origin-top-left items-center gap-2 rounded-[8px] border border-cream/10 bg-leaf-950/80 px-3 py-1.5 text-[12px] text-cream-75"
           >
+            <motion.span
+              aria-hidden="true"
+              className="inline-block size-1.5 rounded-full bg-gold-400"
+              animate={
+                shouldReduceMotion ? undefined : { opacity: [0.3, 1, 0.3] }
+              }
+              transition={
+                shouldReduceMotion
+                  ? undefined
+                  : { duration: 1, repeat: Infinity, ease: "easeInOut" }
+              }
+            />
             <span>
               Searching{" "}
               <strong className="font-medium text-cream">
-                {submitted.query}
+                {pending.query}
               </strong>{" "}
-              ({MODE_LABELS[submitted.mode]})
+              ({MODE_LABELS[pending.mode]})
             </span>
             <button
               type="button"
-              onClick={() => setSubmitted(null)}
+              onClick={() => setPending(null)}
               aria-label="Dismiss search preview"
               className="inline-flex size-4 cursor-pointer items-center justify-center rounded text-cream-60 transition-colors duration-150 ease-standard hover:text-cream"
             >

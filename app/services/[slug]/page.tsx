@@ -4,14 +4,12 @@ import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteHeader } from "@/components/home/SiteHeader";
 import { ServiceProviderDetail } from "@/components/services/ServiceProviderDetail";
 import {
-  ALL_SERVICE_PROVIDERS,
   getServiceProviderBySlug,
-} from "@/lib/mock-services";
+  listAllServiceProviderSlugs,
+} from "@/lib/data/services";
 
-export function generateStaticParams() {
-  return ALL_SERVICE_PROVIDERS.map((provider) => ({
-    slug: provider.id,
-  }));
+export async function generateStaticParams() {
+  return listAllServiceProviderSlugs();
 }
 
 export async function generateMetadata({
@@ -20,7 +18,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const provider = getServiceProviderBySlug(slug);
+  const provider = await getServiceProviderBySlug(slug, true);
   if (!provider) {
     return {
       title: "Service Provider Not Found — Servyn",
@@ -38,7 +36,7 @@ export default async function ServiceProviderPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const provider = getServiceProviderBySlug(slug);
+  const provider = await getServiceProviderBySlug(slug, true);
 
   if (!provider) {
     notFound();

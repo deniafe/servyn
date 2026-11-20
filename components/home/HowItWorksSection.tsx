@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,6 +11,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
+import { ScrollReveal, useStaggerMotion } from "@/components/ui/motion";
 
 interface SideStep {
   number: number;
@@ -82,6 +86,8 @@ const TRUST_PILLARS: ReadonlyArray<TrustPillar> = [
 ];
 
 export function HowItWorksSection() {
+  const { container, item } = useStaggerMotion(0.06);
+
   return (
     <section
       id="how-it-works"
@@ -89,22 +95,37 @@ export function HowItWorksSection() {
       className="scroll-mt-[var(--sv-hdr-h)] bg-cream text-ink"
     >
       <div className="mx-auto w-full max-w-[1240px] px-6 py-16 lg:px-8 lg:py-20">
-        <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-600">
-          <span
-            aria-hidden="true"
-            className="inline-block h-[1.5px] w-6 bg-gold-500"
-          />
-          How it works
-        </p>
-        <h2
-          id="how-it-works-heading"
-          className="mt-2 font-serif text-[clamp(1.75rem,3vw,2.45rem)] leading-[1.12] font-semibold tracking-[-0.02em] text-ink"
-        >
-          Two sides, one account
-        </h2>
+        <ScrollReveal>
+          <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-600">
+            <span
+              aria-hidden="true"
+              className="inline-block h-[1.5px] w-6 bg-gold-500"
+            />
+            How it works
+          </p>
+          <h2
+            id="how-it-works-heading"
+            className="mt-2 font-serif text-[clamp(1.75rem,3vw,2.45rem)] leading-[1.12] font-semibold tracking-[-0.02em] text-ink"
+          >
+            Two sides, one account
+          </h2>
+        </ScrollReveal>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="flex flex-col rounded-[20px] border border-line bg-surface p-7 shadow-soft">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.12 }}
+          className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2"
+        >
+          <motion.div
+            variants={item}
+            whileHover={{
+              y: -3,
+              transition: { type: "spring", bounce: 0, duration: 0.28 },
+            }}
+            className="flex flex-col rounded-[20px] border border-line bg-surface p-7 shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
+          >
             <h3 className="flex items-center gap-2 font-serif text-[19px] font-semibold text-ink">
               <Search
                 className="size-4 shrink-0 text-gold-600"
@@ -145,9 +166,16 @@ export function HowItWorksSection() {
                 />
               </Link>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex flex-col rounded-[20px] border border-line bg-surface p-7 shadow-soft">
+          <motion.div
+            variants={item}
+            whileHover={{
+              y: -3,
+              transition: { type: "spring", bounce: 0, duration: 0.28 },
+            }}
+            className="flex flex-col rounded-[20px] border border-line bg-surface p-7 shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
+          >
             <h3 className="flex items-center gap-2 font-serif text-[19px] font-semibold text-ink">
               <Store
                 className="size-4 shrink-0 text-gold-600"
@@ -188,16 +216,26 @@ export function HowItWorksSection() {
                 />
               </Link>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       <div className="border-y border-leaf-200/70 bg-leaf-50">
-        <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.15 }}
+          className="mx-auto grid w-full max-w-[1240px] grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:px-8"
+        >
           {TRUST_PILLARS.map((pillar) => {
             const Icon = pillar.icon;
             return (
-              <div key={pillar.title} className="flex items-start gap-3.5">
+              <motion.div
+                key={pillar.title}
+                variants={item}
+                className="flex items-start gap-3.5"
+              >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-leaf-900 text-gold-300">
                   <Icon
                     className="size-[18px]"
@@ -213,10 +251,10 @@ export function HowItWorksSection() {
                     {pillar.body}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
