@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" fill="none">
+  <rect width="960" height="480" fill="#F3EDE0" />
+
+  <!-- Subtle urban block texture -->
+  <g fill="#EAE1CE">
+    <rect x="64" y="54" width="68" height="46" rx="4" />
+    <rect x="148" y="48" width="84" height="52" rx="4" />
+    <rect x="260" y="62" width="74" height="44" rx="4" />
+    <rect x="358" y="56" width="62" height="50" rx="4" />
+    <rect x="448" y="66" width="54" height="40" rx="4" />
+    <rect x="598" y="58" width="76" height="48" rx="4" />
+    <rect x="698" y="64" width="88" height="42" rx="4" />
+    <rect x="812" y="52" width="80" height="54" rx="4" />
+
+    <rect x="70" y="138" width="78" height="54" rx="4" />
+    <rect x="168" y="144" width="64" height="48" rx="4" />
+    <rect x="288" y="132" width="68" height="46" rx="4" />
+    <rect x="442" y="188" width="72" height="58" rx="4" />
+    <rect x="528" y="192" width="64" height="52" rx="4" />
+    <rect x="614" y="142" width="78" height="48" rx="4" />
+    <rect x="720" y="148" width="82" height="56" rx="4" />
+    <rect x="828" y="138" width="74" height="50" rx="4" />
+
+    <rect x="82" y="294" width="70" height="48" rx="4" />
+    <rect x="176" y="302" width="84" height="52" rx="4" />
+    <rect x="282" y="318" width="76" height="46" rx="4" />
+    <rect x="382" y="330" width="68" height="44" rx="4" />
+    <rect x="472" y="324" width="74" height="52" rx="4" />
+    <rect x="566" y="346" width="80" height="46" rx="4" />
+    <rect x="748" y="312" width="78" height="54" rx="4" />
+    <rect x="844" y="298" width="66" height="52" rx="4" />
+
+    <rect x="104" y="388" width="88" height="50" rx="4" />
+    <rect x="220" y="396" width="76" height="44" rx="4" />
+    <rect x="424" y="398" width="84" height="46" rx="4" />
+    <rect x="662" y="392" width="90" height="48" rx="4" />
+    <rect x="786" y="386" width="84" height="50" rx="4" />
+  </g>
+
+  <!-- Manchester green parks & commons -->
+  <g fill="#D5E4D1" stroke="#C1D6BC" stroke-width="1.5">
+    <!-- North Cheetham / Heaton parklands -->
+    <path d="M518 28 Q572 18 614 48 L596 98 Q544 106 508 78 Z" />
+    <!-- Peel Park / Salford meadow -->
+    <path d="M226 156 Q272 142 300 176 L278 214 Q236 218 214 190 Z" />
+    <!-- Philips Park east -->
+    <path d="M726 112 Q784 98 818 134 L798 178 Q744 180 718 148 Z" />
+    <!-- Alexandra Park (Moss Side / Chorlton edge) -->
+    <path d="M402 356 Q456 346 474 394 L446 426 Q400 420 390 384 Z" />
+    <!-- Platt Fields Park -->
+    <path d="M524 388 Q592 374 614 420 L578 448 Q530 444 514 412 Z" />
+    <!-- Debdale / Gorton Reservoir park -->
+    <path d="M812 224 Q874 214 904 260 L876 308 Q824 304 804 268 Z" />
+  </g>
+
+  <!-- Gorton Reservoir water feature -->
+  <path d="M838 248 Q874 244 884 268 Q872 288 836 280 Z" fill="#C4DAE7" stroke="#ADC8D8" stroke-width="1.2" />
+
+  <!-- River Irwell & Ship Canal / Bridgewater Canal waterways -->
+  <path
+    d="M120 -12 C180 56 266 96 320 158 C362 206 394 216 408 242 C422 268 336 292 228 320 C138 344 74 366 -12 396"
+    stroke="#C4DAE7"
+    stroke-width="14"
+    stroke-linecap="round"
+  />
+  <path
+    d="M120 -12 C180 56 266 96 320 158 C362 206 394 216 408 242 C422 268 336 292 228 320 C138 344 74 366 -12 396"
+    stroke="#AFC9DA"
+    stroke-width="1.4"
+    stroke-linecap="round"
+  />
+
+  <!-- Rochdale / Ashton Canal sweeping northeast -->
+  <path
+    d="M404 242 C472 246 530 226 592 212 C666 196 764 176 972 132"
+    stroke="#C4DAE7"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+
+  <!-- Fine local neighbourhood street network -->
+  <g stroke="#FAF6EB" stroke-width="2.6" stroke-linecap="round">
+    <path d="M0 112 L960 112" />
+    <path d="M0 218 L960 218" />
+    <path d="M0 342 L960 342" />
+    <path d="M0 426 L960 426" />
+    <path d="M168 0 L168 480" />
+    <path d="M294 0 L294 480" />
+    <path d="M412 0 L412 480" />
+    <path d="M562 0 L562 480" />
+    <path d="M684 0 L684 480" />
+    <path d="M812 0 L812 480" />
+    <path d="M362 172 L584 172" />
+    <path d="M352 282 L630 282" />
+    <path d="M454 128 L454 378" />
+  </g>
+
+  <!-- Primary Manchester arterial highways (casing + ivory fill) -->
+  <g stroke="#DFD5C0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Bury New Road / Rochdale Rd North -->
+    <path d="M476 202 L486 92 L494 -12" />
+    <path d="M512 210 L584 114 L668 -12" />
+    <!-- Hyde Rd East to Gorton -->
+    <path d="M542 238 L718 260 L972 276" />
+    <!-- Stockport Rd A6 South-East to Ardwick / Levenshulme -->
+    <path d="M524 258 L612 316 L712 418 L774 492" />
+    <!-- Princess Parkway & Wilmslow Rd South -->
+    <path d="M492 266 L502 356 L516 492" />
+    <path d="M448 264 L402 358 L352 492" />
+    <!-- Chorlton / Stretford / Chester Rd South-West -->
+    <path d="M416 254 L318 308 L224 374 L92 492" />
+    <!-- Eccles New Rd / Regent Rd West -->
+    <path d="M402 222 L284 226 L128 242 L-12 248" />
+    <!-- Salford Crescent / Broad St North-West -->
+    <path d="M424 192 L346 156 L224 126 L-12 96" />
+  </g>
+
+  <g stroke="#FFFDF7" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M476 202 L486 92 L494 -12" />
+    <path d="M512 210 L584 114 L668 -12" />
+    <path d="M542 238 L718 260 L972 276" />
+    <path d="M524 258 L612 316 L712 418 L774 492" />
+    <path d="M492 266 L502 356 L516 492" />
+    <path d="M448 264 L402 358 L352 492" />
+    <path d="M416 254 L318 308 L224 374 L92 492" />
+    <path d="M402 222 L284 226 L128 242 L-12 248" />
+    <path d="M424 192 L346 156 L224 126 L-12 96" />
+  </g>
+
+  <!-- Manchester Inner Ring Road A57(M) / Trinity Way loop -->
+  <ellipse
+    cx="474"
+    cy="228"
+    rx="68"
+    ry="40"
+    stroke="#E1C27A"
+    stroke-width="9"
+  />
+  <ellipse
+    cx="474"
+    cy="228"
+    rx="68"
+    ry="40"
+    stroke="#F6DFA7"
+    stroke-width="6"
+  />
+
+  <!-- Subtle outer orbital route M60 arc -->
+  <path
+    d="M120 492 C58 318 68 158 188 18"
+    stroke="#E6CFA0"
+    stroke-width="5"
+    stroke-linecap="round"
+  />
+  <path
+    d="M846 -12 C924 126 932 308 864 492"
+    stroke="#E6CFA0"
+    stroke-width="5"
+    stroke-linecap="round"
+  />
+
+  <!-- Clean understated cartographic labels (offset from provider pin hotspots) -->
+  <g
+    fill="#708074"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-weight="700"
+    letter-spacing="1.6"
+    text-anchor="middle"
+    stroke="#F3EDE0"
+    stroke-width="3.5"
+    paint-order="stroke"
+  >
+    <text x="476" y="231" font-size="11.5" fill="#4E6053">MANCHESTER</text>
+    <text x="536" y="128" font-size="10">CHEETHAM HILL</text>
+    <text x="306" y="168" font-size="10">SALFORD</text>
+    <text x="234" y="284" font-size="10">TRAFFORD</text>
+    <text x="382" y="308" font-size="10">HULME</text>
+    <text x="564" y="332" font-size="10">MOSS SIDE</text>
+    <text x="298" y="366" font-size="10">CHORLTON</text>
+    <text x="616" y="218" font-size="10">ARDWICK</text>
+    <text x="702" y="352" font-size="10">LEVENSHULME</text>
+    <text x="752" y="236" font-size="10">GORTON</text>
+  </g>
+</svg>

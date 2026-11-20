@@ -1,0 +1,1517 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============ Runtime primitives — SERVYN (light-first, default) ============ */
+:root {
+  /* Leaf — primary brand green (deep = brand surfaces, mid = actions/links) */
+  --sv-leaf-950: #071E16;
+  --sv-leaf-900: #0D3123; /* header, hero, footer, toast, cookie, booking panel */
+  --sv-leaf-800: #12402E; /* leaf buttons, active chips, "me" chat bubble */
+  --sv-leaf-700: #1A5A3F; /* links on hover, kente */
+  --sv-leaf-600: #237455; /* links, switches on, success solid, scrollbar */
+  --sv-leaf-500: #2E8B6A; /* icons, slot hover, fine-print icons */
+  --sv-leaf-400: #4CA985; /* success-soft accent, toast success border */
+  --sv-leaf-300: #7FC7A6; /* timeline connector done, toast success icon */
+  --sv-leaf-200: #BCE3D0; /* light borders (ok tags) */
+  --sv-leaf-100: #DFF2E8; /* ghost button hover, thread on bg */
+  --sv-leaf-50: #EFF8F2;  /* ai-note, bulk-box, co-book, reply */
+
+  /* Gold — accent / CTA / emphasis */
+  --sv-gold-600: #C88A1D; /* eyebrows, card-title icons, focus details */
+  --sv-gold-500: #E9A83B; /* primary accent, dots, focus outline, range track end */
+  --sv-gold-400: #F2B84B; /* CTA gradient top, dark-section accents, glow */
+  --sv-gold-300: #F6C96F; /* links on brand surfaces, table headers, selection bg */
+  --sv-gold-200: #FAE0A8; /* ai-note border, chip--gold border */
+  --sv-gold-100: #FCEDCB; /* chip--gold, verified badge bg, countdown bg */
+  --sv-gold-50: #FDF6E4;  /* band-butter, selected service/day, ai-note end */
+
+  /* Neutrals — cream canvas + ink text + line borders */
+  --sv-cream: #F6F1E6;       /* page background */
+  --sv-cream-2: #EFE8D8;     /* secondary cream */
+  --sv-surface: #FFFDF7;     /* cards, inputs, popovers */
+  --sv-surface-2: #FBF7EC;   /* insets, tracks, table stripes, input bg */
+  --sv-ink: #182720;         /* primary text, headings, prices */
+  --sv-ink-2: #33463C;       /* body / secondary text */
+  --sv-mut: #5D6F63;         /* muted labels, captions, placeholders */
+  --sv-placeholder: #9AA89E; /* hero search placeholder */
+  --sv-line: #E7DFCC;        /* default border */
+  --sv-line-2: #DCD3BC;      /* strong border (inputs, chip-btns, daypill, select) */
+
+  /* Category / semantic tints — soft background + dark text pairs */
+  --sv-peach: #FFE3C7;  --sv-peach-d: #9A4B12;
+  --sv-blush: #FAD6CE;  --sv-blush-d: #B03A2E;
+  --sv-mint: #D5EDDD;   --sv-mint-d: #1A6B4F;
+  --sv-sky: #D4E7F4;    --sv-sky-d: #2C6396;
+  --sv-lav: #E5DEF6;    --sv-lav-d: #5B44A8;
+  --sv-butter: #FBEFC9; --sv-butter-d: #8A6210;
+  --sv-rose: #F6D8E4;   --sv-rose-d: #A03D67;
+  --sv-sage: #E4EDD6;   --sv-sage-d: #55702C;
+  --sv-terra: #E8833A;  /* avatar gradient end, decorative */
+
+  /* Status */
+  --sv-red: #D9481F;     /* badges, unread dots, alert accent, toast danger */
+  --sv-danger: #C0392B;  /* destructive actions, error borders */
+  --sv-success: #237455; /* = leaf-600 */
+  --sv-warn: #C88A1D;    /* = gold-600 */
+  --sv-info: #3E7FB8;    /* info accent */
+
+  /* Brand-foreground (text on leaf-900/950) */
+  --sv-cream-85: rgba(246, 241, 230, .85);  /* nav idle, hdr-ic */
+  --sv-cream-75: rgba(246, 241, 230, .75);  /* hero-sub, footer text */
+  --sv-cream-60: rgba(246, 241, 230, .60);  /* muted on brand */
+  --sv-cream-line: rgba(246, 241, 230, .10);/* brand dividers */
+  --sv-gold-15: rgba(242, 184, 75, .15);    /* brand gold tint */
+  --sv-gold-25: rgba(242, 184, 75, .25);    /* brand gold border */
+  --sv-gold-45: rgba(242, 184, 75, .45);    /* brand gold strong border */
+
+  /* Layout */
+  --sv-hdr-h: 76px; /* header height (64px <= 720px) */
+  --sv-wrap: 1240px;/* max content width */
+
+  /* Radius */
+  --sv-r-sm: 12px;
+  --sv-r-md: 16px;
+  --sv-r-lg: 22px;
+  --sv-r-xl: 24px;
+  --sv-r-2xl: 28px;
+  --sv-r-full: 9999px;
+  --sv-r-tag: 8px;
+  --sv-r-avatar: 13px; /* fixed-ish (sm 10, lg 15, xl 20) */
+
+  /* Elevation (shadows are green-tinted, not neutral black) */
+  --sv-shadow-soft: 0 6px 24px rgba(13, 49, 35, .07);
+  --sv-shadow-lift: 0 16px 44px rgba(13, 49, 35, .14);
+  --sv-shadow-gold: 0 10px 30px rgba(233, 168, 59, .35);
+  --sv-shadow-modal: 0 40px 100px rgba(7, 30, 22, .5);
+  --sv-shadow-drawer: -30px 0 80px rgba(7, 30, 22, .4);
+  --sv-shadow-toast: 0 18px 50px rgba(7, 30, 22, .5);
+
+  /* Gradients */
+  --sv-grad-gold: linear-gradient(180deg, var(--sv-gold-400), var(--sv-gold-500));
+  --sv-grad-gold-135: linear-gradient(135deg, var(--sv-gold-400), var(--sv-gold-500));
+  --sv-grad-avatar: linear-gradient(135deg, var(--sv-gold-400), var(--sv-terra));
+  --sv-grad-brand: linear-gradient(180deg, var(--sv-leaf-900), var(--sv-leaf-950));
+  --sv-grad-range: linear-gradient(90deg, var(--sv-leaf-600), var(--sv-gold-500));
+  --sv-grad-rate: linear-gradient(90deg, var(--sv-gold-500), var(--sv-gold-400));
+  --sv-grad-band-butter: linear-gradient(180deg, var(--sv-cream) 0%, var(--sv-gold-50) 30%, var(--sv-gold-50) 70%, var(--sv-cream) 100%);
+  --sv-grad-ai-note: linear-gradient(120deg, var(--sv-gold-50), var(--sv-leaf-50));
+
+  /* Service banner fallback gradients */
+  --sv-banner-catering: linear-gradient(135deg, #B44825 0%, #5F331E 58%, #162B22 100%);
+  --sv-banner-hair: linear-gradient(135deg, #B88628 0%, #4E4D1F 58%, #142E22 100%);
+  --sv-banner-home: linear-gradient(135deg, #277958 0%, #154B36 58%, #0C2B1F 100%);
+  --sv-banner-dj: linear-gradient(135deg, #6A3D8A 0%, #3A2756 58%, #132622 100%);
+  --sv-banner-barber: linear-gradient(135deg, #1E6245 0%, #113B2B 58%, #092118 100%);
+  --sv-banner-events: linear-gradient(135deg, #9C3A5E 0%, #4F233A 58%, #162420 100%);
+  --sv-banner-cakes: linear-gradient(135deg, #7B4B94 0%, #452B5C 58%, #182723 100%);
+  --sv-banner-fashion: linear-gradient(135deg, #C08224 0%, #5C431C 58%, #172B21 100%);
+  --sv-banner-childcare: linear-gradient(135deg, #2B6694 0%, #1A3E59 58%, #102822 100%);
+  --sv-banner-decor: linear-gradient(135deg, #AE463A 0%, #5B2826 58%, #172721 100%);
+  --sv-banner-rentals: linear-gradient(135deg, #9B5420 0%, #4E2F1A 58%, #152920 100%);
+  --sv-banner-local: linear-gradient(135deg, #2C6E52 0%, #184231 58%, #0D261C 100%);
+
+  /* Cultural motifs */
+  --sv-kente: repeating-linear-gradient(
+    90deg,
+    var(--sv-leaf-700) 0 26px,
+    var(--sv-gold-400) 26px 52px,
+    var(--sv-red) 52px 78px,
+    var(--sv-cream) 78px 86px
+  );
+  --sv-diamond-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cpath d='M28 0 56 28 28 56 0 28Z' fill='none' stroke='%23F2B84B' stroke-opacity='.05'/%3E%3C/svg%3E");
+
+  /* Motion */
+  --sv-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* shadcn/ui semantic mapping (light-first Servyn theme) */
+  --background: var(--sv-cream);
+  --foreground: var(--sv-ink);
+  --card: var(--sv-surface);
+  --card-foreground: var(--sv-ink);
+  --popover: var(--sv-surface);
+  --popover-foreground: var(--sv-ink);
+  --primary: var(--sv-gold-500);
+  --primary-foreground: #241A05;
+  --secondary: var(--sv-leaf-800);
+  --secondary-foreground: var(--sv-cream);
+  --muted: var(--sv-surface-2);
+  --muted-foreground: var(--sv-mut);
+  --accent: var(--sv-leaf-100);
+  --accent-foreground: var(--sv-leaf-800);
+  --destructive: var(--sv-danger);
+  --destructive-foreground: #FFFFFF;
+  --border: var(--sv-line);
+  --input: var(--sv-line-2);
+  --ring: var(--sv-gold-500);
+  --radius: 0.75rem;
+  --chart-1: var(--sv-gold-500);
+  --chart-2: var(--sv-leaf-600);
+  --chart-3: var(--sv-leaf-400);
+  --chart-4: var(--sv-terra);
+  --chart-5: var(--sv-info);
+  --sidebar: var(--sv-surface);
+  --sidebar-foreground: var(--sv-ink);
+  --sidebar-primary: var(--sv-leaf-800);
+  --sidebar-primary-foreground: var(--sv-cream);
+  --sidebar-accent: var(--sv-leaf-100);
+  --sidebar-accent-foreground: var(--sv-leaf-800);
+  --sidebar-border: var(--sv-line);
+  --sidebar-ring: var(--sv-gold-500);
+}
+
+@media (max-width: 720px) {
+  :root {
+    --sv-hdr-h: 64px;
+  }
+}
+
+/* ============ Tailwind v4 theme mapping ============ */
+@theme inline {
+  /* Fonts */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-heading: var(--font-serif);
+
+  /* shadcn semantic colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Surfaces */
+  --color-cream: var(--sv-cream);
+  --color-cream-2: var(--sv-cream-2);
+  --color-surface: var(--sv-surface);
+  --color-surface-2: var(--sv-surface-2);
+
+  /* Text */
+  --color-ink: var(--sv-ink);
+  --color-ink-2: var(--sv-ink-2);
+  --color-mut: var(--sv-mut);
+  --color-placeholder: var(--sv-placeholder);
+  --color-cream-85: var(--sv-cream-85);
+  --color-cream-75: var(--sv-cream-75);
+  --color-cream-60: var(--sv-cream-60);
+
+  /* Borders */
+  --color-line: var(--sv-line);
+  --color-line-2: var(--sv-line-2);
+  --color-cream-line: var(--sv-cream-line);
+
+  /* Leaf scale */
+  --color-leaf-50: var(--sv-leaf-50);
+  --color-leaf-100: var(--sv-leaf-100);
+  --color-leaf-200: var(--sv-leaf-200);
+  --color-leaf-300: var(--sv-leaf-300);
+  --color-leaf-400: var(--sv-leaf-400);
+  --color-leaf-500: var(--sv-leaf-500);
+  --color-leaf-600: var(--sv-leaf-600);
+  --color-leaf-700: var(--sv-leaf-700);
+  --color-leaf-800: var(--sv-leaf-800);
+  --color-leaf-900: var(--sv-leaf-900);
+  --color-leaf-950: var(--sv-leaf-950);
+
+  /* Gold scale */
+  --color-gold-50: var(--sv-gold-50);
+  --color-gold-100: var(--sv-gold-100);
+  --color-gold-200: var(--sv-gold-200);
+  --color-gold-300: var(--sv-gold-300);
+  --color-gold-400: var(--sv-gold-400);
+  --color-gold-500: var(--sv-gold-500);
+  --color-gold-600: var(--sv-gold-600);
+  --color-gold-15: var(--sv-gold-15);
+  --color-gold-25: var(--sv-gold-25);
+  --color-gold-45: var(--sv-gold-45);
+  --color-gold-ink: #241A05;
+
+  /* Category tints — soft bg + dark text */
+  --color-peach: var(--sv-peach);   --color-peach-d: var(--sv-peach-d);
+  --color-blush: var(--sv-blush);   --color-blush-d: var(--sv-blush-d);
+  --color-mint: var(--sv-mint);     --color-mint-d: var(--sv-mint-d);
+  --color-sky: var(--sv-sky);       --color-sky-d: var(--sv-sky-d);
+  --color-lav: var(--sv-lav);       --color-lav-d: var(--sv-lav-d);
+  --color-butter: var(--sv-butter); --color-butter-d: var(--sv-butter-d);
+  --color-rose: var(--sv-rose);     --color-rose-d: var(--sv-rose-d);
+  --color-sage: var(--sv-sage);     --color-sage-d: var(--sv-sage-d);
+  --color-terra: var(--sv-terra);
+
+  /* Status */
+  --color-red: var(--sv-red);
+  --color-danger: var(--sv-danger);
+  --color-success: var(--sv-success);
+  --color-warn: var(--sv-warn);
+  --color-info: var(--sv-info);
+
+  /* Gradient stops */
+  --color-grad-gold-1: var(--sv-gold-400);
+  --color-grad-gold-2: var(--sv-gold-500);
+  --color-grad-gold-3: var(--sv-terra);
+  --color-grad-brand-1: var(--sv-leaf-900);
+  --color-grad-brand-2: var(--sv-leaf-950);
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-full: 9999px;
+
+  /* Elevation */
+  --shadow-soft: var(--sv-shadow-soft);
+  --shadow-lift: var(--sv-shadow-lift);
+  --shadow-gold: var(--sv-shadow-gold);
+  --shadow-modal: var(--sv-shadow-modal);
+  --shadow-drawer: var(--sv-shadow-drawer);
+  --shadow-toast: var(--sv-shadow-toast);
+
+  /* Motion */
+  --ease-standard: var(--sv-ease);
+  --animate-reveal: reveal .7s var(--sv-ease) both;
+  --animate-ping: ping 1.8s var(--sv-ease) infinite;
+  --animate-floaty: floaty 6s ease-in-out infinite alternate;
+  --animate-pop: pop .45s var(--sv-ease);
+  --animate-slowspin: slowspin 14s linear infinite;
+  --animate-bubin: bubin .3s var(--sv-ease);
+  --animate-mpop: mpop .35s var(--sv-ease);
+  --animate-dslide: dslide .35s var(--sv-ease);
+  --animate-droppop: droppop .25s var(--sv-ease);
+  --animate-toastin: toastin .35s var(--sv-ease);
+}
+
+@keyframes rot { to { transform: rotate(360deg); } }
+@keyframes slowspin { to { transform: rotate(360deg); } }
+@keyframes ping { 0% { transform: scale(.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes floaty { from { transform: translateY(-5px); } to { transform: translateY(7px); } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.4); } 100% { transform: scale(1); } }
+@keyframes reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes bubin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mpop { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes dslide { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes droppop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes toastin { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes conf { from { transform: translate(0, 0) rotate(0); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sv-leaf-600) transparent;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4 {
+    line-height: 1.15;
+    font-weight: 650;
+  }
+  ::selection {
+    background: var(--sv-gold-300);
+    color: var(--sv-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--sv-gold-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--sv-leaf-600);
+    border-radius: 8px;
+    border: 2px solid var(--sv-cream);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sv-gold-500);
+  }
+}
+
+@layer components {
+  .hero-surface {
+    background: linear-gradient(180deg, var(--sv-leaf-900), var(--sv-leaf-950));
+  }
+
+  .apple-glass-header {
+    background: rgba(13, 49, 35, 0.84);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+
+  .apple-glass-dock {
+    background: rgba(7, 30, 22, 0.78);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(246, 241, 230, 0.14);
+  }
+
+  /* Hero SVG character & room choreography (GPU-composited transform/opacity only) */
+  .svg-stylist-body,
+  .svg-stylist-head,
+  .svg-stylist-earring,
+  .svg-arm-left,
+  .svg-forearm-left,
+  .svg-arm-right,
+  .svg-forearm-right,
+  .svg-held-strand,
+  .svg-child-upper,
+  .svg-child-arm,
+  .svg-child-head,
+  .svg-braid-l-out,
+  .svg-braid-l-in,
+  .svg-braid-r-in,
+  .svg-braid-r-out,
+  .svg-braid-glint-a,
+  .svg-braid-glint-b,
+  .svg-barber-stripes,
+  .svg-client-upper,
+  .svg-client-head,
+  .svg-barber-body,
+  .svg-barber-head,
+  .svg-barber-arm-left,
+  .svg-barber-forearm-left,
+  .svg-barber-arm-right,
+  .svg-barber-forearm-right,
+  .svg-trim-flecks,
+  .svg-fade-glint-a,
+  .svg-fade-glint-b,
+  .svg-bunting-sway,
+  .svg-mobile-sway,
+  .svg-block-tower,
+  .svg-toddler-body,
+  .svg-toddler-leg,
+  .svg-toddler-head,
+  .svg-toddler-arm,
+  .svg-toddler-forearm,
+  .svg-held-block,
+  .svg-carer-body,
+  .svg-carer-head,
+  .svg-carer-arm-left,
+  .svg-carer-forearm-left,
+  .svg-carer-arm-right,
+  .svg-tower-glint-a,
+  .svg-tower-glint-b,
+  .svg-plant-leaves,
+  .svg-sun-halo,
+  .svg-mote-a,
+  .svg-mote-b {
+    transform-box: view-box;
+  }
+
+  .svg-stylist-body {
+    transform-origin: 388px 700px;
+    animation: sv-stylist-body 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-stylist-head {
+    transform-origin: 388px 428px;
+    animation: sv-stylist-head 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-stylist-earring {
+    transform-origin: 362px 405px;
+    animation: sv-earring 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-arm-left {
+    transform-origin: 366px 452px;
+    animation: sv-arm-left 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-forearm-left {
+    transform-origin: 330px 448px;
+    animation: sv-forearm-left 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-arm-right {
+    transform-origin: 410px 452px;
+    animation: sv-arm-right 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-forearm-right {
+    transform-origin: 420px 480px;
+    animation: sv-forearm-right 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-held-strand {
+    transform-origin: 420px 504px;
+    animation: sv-held-strand 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-child-upper {
+    transform-origin: 280px 550px;
+    animation: sv-child-breathe 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-child-arm {
+    transform-origin: 256px 496px;
+    animation: sv-child-arm 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-child-head {
+    transform-origin: 280px 474px;
+    animation: sv-child-head 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-r-out {
+    transform-origin: 306px 436px;
+    animation: sv-braid-r-out 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-r-in {
+    transform-origin: 298px 430px;
+    animation: sv-braid-r-in 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-l-in {
+    transform-origin: 262px 430px;
+    animation: sv-braid-l-in 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-l-out {
+    transform-origin: 254px 436px;
+    animation: sv-braid-l-out 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-glint-a {
+    opacity: 0;
+    transform-origin: 328px 486px;
+    animation: sv-braid-glint-a 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-braid-glint-b {
+    opacity: 0;
+    transform-origin: 342px 514px;
+    animation: sv-braid-glint-b 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  /* Barber scene animations */
+  .svg-barber-stripes {
+    animation: sv-barber-stripes 1.8s linear infinite;
+  }
+
+  .svg-client-upper {
+    transform-origin: 280px 588px;
+    animation: sv-client-upper 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-client-head {
+    transform-origin: 280px 474px;
+    animation: sv-client-head 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-body {
+    transform-origin: 396px 700px;
+    animation: sv-barber-body 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-head {
+    transform-origin: 396px 426px;
+    animation: sv-barber-head 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-arm-left {
+    transform-origin: 368px 462px;
+    animation: sv-barber-arm-left 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-forearm-left {
+    transform-origin: 338px 468px;
+    animation: sv-barber-forearm-left 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-arm-right {
+    transform-origin: 422px 462px;
+    animation: sv-barber-arm-right 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-barber-forearm-right {
+    transform-origin: 428px 496px;
+    animation: sv-barber-forearm-right 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-trim-flecks {
+    opacity: 0;
+    transform-origin: 314px 444px;
+    animation: sv-trim-flecks 3.0s ease-out infinite;
+  }
+
+  .svg-fade-glint-a {
+    opacity: 0;
+    transform-origin: 310px 420px;
+    animation: sv-fade-glint-a 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-fade-glint-b {
+    opacity: 0;
+    transform-origin: 322px 438px;
+    animation: sv-fade-glint-b 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  /* Childminding scene animations */
+  .svg-bunting-sway {
+    transform-origin: 130px 172px;
+    animation: sv-bunting-sway 4.2s ease-in-out infinite;
+  }
+
+  .svg-mobile-sway {
+    transform-origin: 445px 142px;
+    animation: sv-mobile-sway 3.6s ease-in-out infinite;
+  }
+
+  .svg-block-tower {
+    transform-origin: 292px 666px;
+    animation: sv-block-tower 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-toddler-body {
+    transform-origin: 216px 662px;
+    animation: sv-toddler-body 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-toddler-leg {
+    transform-origin: 214px 646px;
+    animation: sv-toddler-leg 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-toddler-head {
+    transform-origin: 217px 538px;
+    animation: sv-toddler-head 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-toddler-arm {
+    transform-origin: 234px 568px;
+    animation: sv-toddler-arm 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-toddler-forearm {
+    transform-origin: 256px 592px;
+    animation: sv-toddler-forearm 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-held-block {
+    transform-origin: 278px 610px;
+    animation: sv-held-block 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-carer-body {
+    transform-origin: 406px 665px;
+    animation: sv-carer-body 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-carer-head {
+    transform-origin: 406px 468px;
+    animation: sv-carer-head 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-carer-arm-left {
+    transform-origin: 382px 504px;
+    animation: sv-carer-arm-left 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-carer-forearm-left {
+    transform-origin: 362px 540px;
+    animation: sv-carer-forearm-left 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-carer-arm-right {
+    transform-origin: 430px 510px;
+    animation: sv-carer-arm-right 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-tower-glint-a {
+    opacity: 0;
+    transform-origin: 307px 560px;
+    animation: sv-tower-glint-a 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-tower-glint-b {
+    opacity: 0;
+    transform-origin: 328px 574px;
+    animation: sv-tower-glint-b 3.0s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  }
+
+  .svg-plant-leaves {
+    transform-origin: 138px 606px;
+    animation: sv-plant-sway 5.2s ease-in-out infinite;
+  }
+
+  .svg-sun-halo {
+    transform-origin: 460px 250px;
+    animation: sv-sun-breathe 5s ease-in-out infinite;
+  }
+
+  .svg-mote-a {
+    transform-origin: center;
+    animation: sv-mote-drift 5.6s ease-in-out infinite;
+  }
+
+  .svg-mote-b {
+    transform-origin: center;
+    animation: sv-mote-drift 6.8s ease-in-out -3.2s infinite;
+  }
+
+  .svg-scene-paused [class*="svg-"] {
+    animation-play-state: paused !important;
+  }
+
+  .sv-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--sv-line);
+    outline: none;
+  }
+
+  .sv-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--sv-leaf-900);
+    border: 2.5px solid var(--sv-surface);
+    box-shadow: 0 2px 6px rgba(13, 49, 35, 0.28);
+    cursor: pointer;
+    transition: transform 0.16s var(--sv-ease), border-color 0.16s var(--sv-ease);
+  }
+
+  .sv-range::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    border-color: var(--sv-gold-400);
+  }
+
+  .sv-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--sv-leaf-900);
+    border: 2.5px solid var(--sv-surface);
+    box-shadow: 0 2px 6px rgba(13, 49, 35, 0.28);
+    cursor: pointer;
+    transition: transform 0.16s var(--sv-ease), border-color 0.16s var(--sv-ease);
+  }
+
+  .sv-range::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    border-color: var(--sv-gold-400);
+  }
+
+  .sv-range:focus-visible {
+    outline: 2px solid var(--sv-gold-500);
+    outline-offset: 4px;
+    border-radius: 9999px;
+  }
+}
+
+@keyframes sv-stylist-body {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  18% {
+    transform: translate(-1px, -2px) rotate(-2.1deg);
+  }
+  36% {
+    transform: translate(-1.5px, -1px) rotate(-2.4deg);
+  }
+  54% {
+    transform: translate(-1px, -2px) rotate(-2deg);
+  }
+  74% {
+    transform: translate(0, 0) rotate(0.9deg);
+  }
+}
+
+@keyframes sv-stylist-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-6.5deg);
+  }
+  40% {
+    transform: rotate(-8deg);
+  }
+  58% {
+    transform: rotate(-5.5deg);
+  }
+  78% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes sv-earring {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  26% {
+    transform: rotate(11deg);
+  }
+  48% {
+    transform: rotate(-6deg);
+  }
+  66% {
+    transform: rotate(9deg);
+  }
+  84% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes sv-arm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(-54deg);
+  }
+  35% {
+    transform: rotate(-68deg);
+  }
+  52% {
+    transform: rotate(-52deg);
+  }
+  70% {
+    transform: rotate(-72deg);
+  }
+  86% {
+    transform: rotate(-18deg);
+  }
+}
+
+@keyframes sv-forearm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(86deg);
+  }
+  35% {
+    transform: rotate(64deg);
+  }
+  52% {
+    transform: rotate(78deg);
+  }
+  70% {
+    transform: rotate(54deg);
+  }
+  86% {
+    transform: rotate(26deg);
+  }
+}
+
+@keyframes sv-arm-right {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(46deg);
+  }
+  35% {
+    transform: rotate(20deg);
+  }
+  52% {
+    transform: rotate(50deg);
+  }
+  70% {
+    transform: rotate(-14deg);
+  }
+  86% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes sv-forearm-right {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(54deg);
+  }
+  35% {
+    transform: rotate(22deg);
+  }
+  52% {
+    transform: rotate(58deg);
+  }
+  70% {
+    transform: rotate(-10deg);
+  }
+  86% {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes sv-held-strand {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(-92deg);
+  }
+  35% {
+    transform: rotate(-48deg);
+  }
+  52% {
+    transform: rotate(-98deg);
+  }
+  70% {
+    transform: rotate(28deg);
+  }
+  86% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes sv-child-breathe {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  26% {
+    transform: translate(0, -2.5px) rotate(1.8deg);
+  }
+  54% {
+    transform: translate(0, -1.5px) rotate(1.2deg);
+  }
+  78% {
+    transform: translate(0, 0.5px) rotate(-1.8deg);
+  }
+}
+
+@keyframes sv-child-arm {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  28% {
+    transform: rotate(6.5deg);
+  }
+  76% {
+    transform: rotate(-5.5deg);
+  }
+}
+
+@keyframes sv-child-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  22% {
+    transform: rotate(5.2deg);
+  }
+  50% {
+    transform: rotate(5.5deg);
+  }
+  78% {
+    transform: rotate(-3.5deg);
+  }
+}
+
+@keyframes sv-braid-r-out {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  18% {
+    transform: rotate(-24deg);
+  }
+  35% {
+    transform: rotate(-14deg);
+  }
+  52% {
+    transform: rotate(-26deg);
+  }
+  70% {
+    transform: rotate(-11deg);
+  }
+  84% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes sv-braid-r-in {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-10deg);
+  }
+  38% {
+    transform: rotate(-5deg);
+  }
+  55% {
+    transform: rotate(-11deg);
+  }
+  84% {
+    transform: rotate(3.5deg);
+  }
+}
+
+@keyframes sv-braid-l-in {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  26% {
+    transform: rotate(5deg);
+  }
+  78% {
+    transform: rotate(-4deg);
+  }
+}
+
+@keyframes sv-braid-l-out {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  28% {
+    transform: rotate(6.5deg);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes sv-braid-glint-a {
+  0%, 58%, 82%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  66%, 74% {
+    opacity: 0.95;
+    transform: scale(1.1) rotate(12deg);
+  }
+}
+
+@keyframes sv-braid-glint-b {
+  0%, 62%, 86%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  70%, 78% {
+    opacity: 0.95;
+    transform: scale(1.1) rotate(12deg);
+  }
+}
+
+/* Barber scene keyframes */
+@keyframes sv-barber-stripes {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(0, -24px);
+  }
+}
+
+@keyframes sv-client-upper {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  24% {
+    transform: translate(0, -2.5px) rotate(-2deg);
+  }
+  56% {
+    transform: translate(0, -1.5px) rotate(-1.2deg);
+  }
+  82% {
+    transform: translate(0, 0) rotate(2.2deg);
+  }
+}
+
+@keyframes sv-client-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  24% {
+    transform: rotate(-8deg);
+  }
+  56% {
+    transform: rotate(-4.5deg);
+  }
+  82% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes sv-barber-body {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  20% {
+    transform: translate(-2px, -2px) rotate(-3.8deg);
+  }
+  52% {
+    transform: translate(-2px, -2.2px) rotate(-3.5deg);
+  }
+  80% {
+    transform: translate(1px, 0) rotate(2deg);
+  }
+}
+
+@keyframes sv-barber-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-10deg);
+  }
+  52% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes sv-barber-arm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(32deg);
+  }
+  38% {
+    transform: rotate(-12deg);
+  }
+  56% {
+    transform: rotate(36deg);
+  }
+  78% {
+    transform: rotate(-14deg);
+  }
+}
+
+@keyframes sv-barber-forearm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-18deg);
+  }
+  38% {
+    transform: rotate(18deg);
+  }
+  56% {
+    transform: rotate(-20deg);
+  }
+  78% {
+    transform: rotate(12deg);
+  }
+}
+
+@keyframes sv-barber-arm-right {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(66deg);
+  }
+  38% {
+    transform: rotate(36deg);
+  }
+  56% {
+    transform: rotate(68deg);
+  }
+  72% {
+    transform: rotate(40deg);
+  }
+  86% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes sv-barber-forearm-right {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-36deg);
+  }
+  38% {
+    transform: rotate(-10deg);
+  }
+  56% {
+    transform: rotate(-32deg);
+  }
+  72% {
+    transform: rotate(-8deg);
+  }
+  86% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes sv-trim-flecks {
+  0%, 16% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  26% {
+    opacity: 0.85;
+    transform: translate(-4px, 14px);
+  }
+  62% {
+    opacity: 0;
+    transform: translate(-10px, 42px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-10px, 42px);
+  }
+}
+
+@keyframes sv-fade-glint-a {
+  0%, 58%, 88%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  66%, 78% {
+    opacity: 1;
+    transform: scale(1.25) rotate(14deg);
+  }
+}
+
+@keyframes sv-fade-glint-b {
+  0%, 62%, 90%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  70%, 82% {
+    opacity: 1;
+    transform: scale(1.25) rotate(14deg);
+  }
+}
+
+/* Childminding scene keyframes */
+@keyframes sv-bunting-sway {
+  0%, 100% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+}
+
+@keyframes sv-mobile-sway {
+  0%, 100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes sv-block-tower {
+  0%, 38%, 62%, 100% {
+    transform: scale(1, 1);
+  }
+  43% {
+    transform: scale(1.07, 0.91);
+  }
+  50% {
+    transform: scale(0.97, 1.03);
+  }
+}
+
+@keyframes sv-toddler-body {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  24% {
+    transform: translate(1.5px, -3.5px) rotate(3deg);
+  }
+  48% {
+    transform: translate(0, -5px) rotate(4deg);
+  }
+  78% {
+    transform: translate(-1.5px, 0) rotate(-3deg);
+  }
+}
+
+@keyframes sv-toddler-leg {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  24% {
+    transform: rotate(-14deg);
+  }
+  48% {
+    transform: rotate(5deg);
+  }
+  74% {
+    transform: rotate(-11deg);
+  }
+}
+
+@keyframes sv-toddler-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  24% {
+    transform: rotate(-12deg);
+  }
+  48% {
+    transform: rotate(9deg);
+  }
+  78% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes sv-toddler-arm {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  22% {
+    transform: rotate(-72deg);
+  }
+  42%, 58% {
+    transform: rotate(-20deg);
+  }
+  78% {
+    transform: rotate(-62deg);
+  }
+}
+
+@keyframes sv-toddler-forearm {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  22% {
+    transform: rotate(16deg);
+  }
+  42%, 58% {
+    transform: rotate(10deg);
+  }
+  78% {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes sv-held-block {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  22% {
+    transform: rotate(56deg);
+  }
+  42%, 58% {
+    transform: rotate(10deg);
+  }
+  78% {
+    transform: rotate(48deg);
+  }
+}
+
+@keyframes sv-carer-body {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  26% {
+    transform: translate(-2px, -1.5px) rotate(-4.8deg);
+  }
+  54% {
+    transform: translate(-1.5px, -2px) rotate(-3.5deg);
+  }
+  82% {
+    transform: translate(1px, 0) rotate(2.5deg);
+  }
+}
+
+@keyframes sv-carer-head {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  26% {
+    transform: rotate(-11deg);
+  }
+  54% {
+    transform: rotate(-5deg);
+  }
+  82% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes sv-carer-arm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  24% {
+    transform: rotate(26deg);
+  }
+  44% {
+    transform: rotate(46deg);
+  }
+  62% {
+    transform: rotate(28deg);
+  }
+  78% {
+    transform: rotate(48deg);
+  }
+}
+
+@keyframes sv-carer-forearm-left {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  24% {
+    transform: rotate(28deg);
+  }
+  44% {
+    transform: rotate(48deg);
+  }
+  62% {
+    transform: rotate(24deg);
+  }
+  78% {
+    transform: rotate(44deg);
+  }
+}
+
+@keyframes sv-carer-arm-right {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-18deg);
+  }
+  76% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes sv-tower-glint-a {
+  0%, 38%, 68%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  46%, 60% {
+    opacity: 1;
+    transform: scale(1.25) rotate(14deg);
+  }
+}
+
+@keyframes sv-tower-glint-b {
+  0%, 42%, 72%, 100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  50%, 64% {
+    opacity: 1;
+    transform: scale(1.25) rotate(14deg);
+  }
+}
+
+@keyframes sv-plant-sway {
+  0%, 100% {
+    transform: rotate(-3.4deg);
+  }
+  50% {
+    transform: rotate(3.8deg);
+  }
+}
+
+@keyframes sv-sun-breathe {
+  0%, 100% {
+    transform: scale(0.97);
+    opacity: 0.07;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.17;
+  }
+}
+
+@keyframes sv-mote-drift {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(4px, -16px);
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .apple-glass-header {
+    background: var(--sv-leaf-900);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .apple-glass-dock {
+    background: var(--sv-leaf-950);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .apple-glass-header,
+  .apple-glass-dock {
+    background: var(--sv-leaf-950);
+    border-color: rgba(246, 241, 230, 0.28);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  [class*="svg-"] {
+    animation: none !important;
+  }
+}
