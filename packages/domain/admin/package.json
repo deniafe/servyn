@@ -1,0 +1,23 @@
+{
+  "name": "@servyn/domain-admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@servyn/core": "workspace:*",
+    "@servyn/db": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
