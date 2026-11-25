@@ -74,6 +74,8 @@ describe("Identity mappers", () => {
       userId: "01J00000000000000000000002",
       displayName: "Ada",
       defaultLocation: { postcode: "M1 1AE", lat: 53.4808, lng: -2.2426 },
+      ageConfirmedAt: null,
+      marketingOptIn: false,
       createdAt: now,
       updatedAt: now,
     });

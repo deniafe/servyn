@@ -4,7 +4,6 @@ import { CircleCheck, MapPin, ShieldCheck } from "lucide-react";
 import { AfricanMarketSection } from "@/components/home/AfricanMarketSection";
 import { CategorySection } from "@/components/home/CategorySection";
 import { CommunityFavouritesSection } from "@/components/home/CommunityFavouritesSection";
-import { CookieNotice } from "@/components/home/CookieNotice";
 import { ForProvidersSection } from "@/components/home/ForProvidersSection";
 import { HeroRevealItem } from "@/components/home/HeroReveal";
 import { HeroSearch } from "@/components/home/HeroSearch";
@@ -139,7 +138,6 @@ export default function Home() {
       </main>
 
       <SiteFooter />
-      <CookieNotice />
     </div>
   );
 }

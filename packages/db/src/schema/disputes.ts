@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { users } from "./identity.js";
-import { bookings } from "./booking.js";
+import { users } from "./identity";
+import { bookings } from "./booking";
 
 // ── disputes ──────────────────────────────────────────────────────────────────
 export const disputes = pgTable(

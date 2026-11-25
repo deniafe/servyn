@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { users } from "./identity.js";
+import { users } from "./identity";
 
 // ── support_tickets ───────────────────────────────────────────────────────────
 export const supportTickets = pgTable(

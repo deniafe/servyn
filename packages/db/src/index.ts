@@ -1,5 +1,5 @@
 import "server-only";
 
-export * from "./client.js";
-export * from "./geometry.js";
-export * from "./schema/index.js";
+export * from "./client";
+export * from "./geometry";
+export * from "./schema/index";

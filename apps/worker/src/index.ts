@@ -1,12 +1,14 @@
 import { createServer } from "node:http";
+import { createLogger, initNodeSentry } from "@servyn/observability/node";
+
+initNodeSentry("worker");
+const logger = createLogger({ service: "worker", module: "server" });
 
 const rawPort = process.env.WORKER_PORT ?? process.env.PORT ?? "4001";
 const port = Number(rawPort);
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  process.stderr.write(
-    `${JSON.stringify({ level: "error", service: "worker", msg: "invalid_port", rawPort })}\n`,
-  );
+  logger.error("invalid_port", { rawPort });
   process.exit(1);
 }
 
@@ -29,16 +31,12 @@ const server = createServer((req, res) => {
 });
 
 server.on("error", (err) => {
-  process.stderr.write(
-    `${JSON.stringify({ level: "error", service: "worker", msg: "server_error", error: err.message })}\n`,
-  );
+  logger.error("server_error", { error: err.message });
   process.exit(1);
 });
 
 server.listen(port, () => {
-  process.stdout.write(
-    `${JSON.stringify({ level: "info", service: "worker", msg: "listening", port })}\n`,
-  );
+  logger.info("listening", { port });
 });
 
 const shutdown = () => {

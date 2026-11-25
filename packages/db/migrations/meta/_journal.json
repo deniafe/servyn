@@ -8,6 +8,27 @@
       "when": 1795328692639,
       "tag": "0000_talented_randall_flagg",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795341297145,
+      "tag": "0001_closed_meltdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795344748436,
+      "tag": "0002_great_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795647305507,
+      "tag": "0003_peaceful_triton",
+      "breakpoints": true
     }
   ]
 }

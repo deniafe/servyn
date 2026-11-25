@@ -5,7 +5,7 @@ import {
   ExportJobKindSchema,
   ExportFormatSchema,
   AuditLogMetadataSchema,
-} from "./schema.js";
+} from "./schema";
 
 describe("SupportTicketStateSchema", () => {
   it("accepts all valid states", () => {

@@ -57,28 +57,23 @@ export function ForProvidersSection() {
       <div className="mx-auto grid w-full max-w-[1240px] grid-cols-1 items-center gap-10 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:px-8 lg:py-20">
         <ScrollReveal>
           <p className="inline-flex items-center gap-2.5 text-[11px] font-bold tracking-[0.14em] uppercase text-gold-400">
-            <span
-              aria-hidden="true"
-              className="inline-block h-[1.5px] w-6 bg-gold-400"
-            />
+            <span aria-hidden="true" className="inline-block h-[1.5px] w-6 bg-gold-400" />
             For providers
           </p>
           <h2
             id="for-providers-heading"
             className="mt-3 max-w-[12ch] font-serif text-[clamp(2rem,3.6vw,3rem)] leading-[1.06] font-semibold tracking-[-0.02em] text-cream"
           >
-            Grow your business with{" "}
-            <em className="font-serif italic text-gold-400">Servyn.</em>
+            Grow your business with <em className="font-serif italic text-gold-400">Servyn.</em>
           </h2>
           <p className="mt-5 max-w-[44ch] text-[15px] leading-[1.6] text-cream-75">
-            One calendar, one chat, one payout flow — and a community that
-            comes back. No listing subscription; a simple 10% fee added on top
-            of your prices.
+            One calendar, one chat, one payout flow — and a community that comes back. No listing
+            subscription; a simple 10% fee added on top of your prices.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
-              href="#for-providers"
+              href="/sign-up?intent=vendor"
               className="group inline-flex items-center gap-2 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-6 py-3 text-[14px] font-bold text-gold-ink shadow-gold transition-[transform,filter] hover:brightness-[1.04] active:scale-[0.97]"
             >
               <span>Become a vendor</span>
@@ -89,10 +84,10 @@ export function ForProvidersSection() {
               />
             </Link>
             <Link
-              href="#how-it-works"
-              className="inline-flex items-center rounded-full border border-cream/20 bg-white/[0.04] px-6 py-3 text-[14px] font-semibold text-cream transition-colors hover:border-cream/35 hover:bg-white/[0.08]"
+              href="/sign-up?intent=seller"
+              className="inline-flex items-center rounded-full border border-cream-line bg-cream/5 px-6 py-3 text-[14px] font-semibold text-cream transition-colors hover:border-gold-45 hover:bg-cream/10"
             >
-              See vendor tools
+              Sell African products
             </Link>
           </div>
         </ScrollReveal>
@@ -107,25 +102,13 @@ export function ForProvidersSection() {
           {BENEFITS.map((benefit) => {
             const Icon = benefit.icon;
             return (
-              <motion.li
-                key={benefit.title}
-                variants={item}
-                className="flex items-start gap-4"
-              >
+              <motion.li key={benefit.title} variants={item} className="flex items-start gap-4">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border border-gold-25 bg-gold-15 text-gold-400">
-                  <Icon
-                    className="size-[18px]"
-                    strokeWidth={1.75}
-                    aria-hidden="true"
-                  />
+                  <Icon className="size-[18px]" strokeWidth={1.75} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-[14.5px] font-semibold text-cream">
-                    {benefit.title}
-                  </h3>
-                  <p className="mt-0.5 text-[13px] leading-[1.5] text-cream-60">
-                    {benefit.body}
-                  </p>
+                  <h3 className="text-[14.5px] font-semibold text-cream">{benefit.title}</h3>
+                  <p className="mt-0.5 text-[13px] leading-[1.5] text-cream-60">{benefit.body}</p>
                 </div>
               </motion.li>
             );

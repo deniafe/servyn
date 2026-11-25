@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   integer,
@@ -9,7 +10,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { geometry } from "../geometry.js";
+import { geometry } from "../geometry";
 
 // ── users ─────────────────────────────────────────────────────────────────────
 export const users = pgTable(
@@ -20,6 +21,8 @@ export const users = pgTable(
     email: text("email").notNull(),
     phone: text("phone"),
     status: text("status").notNull().default("active").$type<"active" | "suspended" | "deleted">(),
+    isAdmin: boolean("is_admin").notNull().default(false),
+    consentPreferences: jsonb("consent_preferences"), // parsed with ConsentPreferencesSchema at repo
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -43,6 +46,8 @@ export const customerProfiles = pgTable(
       .references(() => users.id),
     displayName: text("display_name").notNull(),
     defaultLocation: jsonb("default_location"), // parsed with DefaultLocationSchema at repo
+    ageConfirmedAt: timestamp("age_confirmed_at", { withTimezone: true }),
+    marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -65,6 +70,7 @@ export const vendorProfiles = pgTable(
     description: text("description"),
     serviceArea: geometry("service_area"),
     stripeAccountId: text("stripe_account_id"),
+    isSeller: boolean("is_seller").notNull().default(false),
     verificationStatus: text("verification_status")
       .notNull()
       .default("unverified")

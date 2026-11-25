@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+for (const envFile of [".env", ".env.local"]) {
+  const fullPath = path.resolve(process.cwd(), "../..", envFile);
+  if (fs.existsSync(fullPath)) {
+    process.loadEnvFile(fullPath);
+  }
+}
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -34,4 +44,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  telemetry: false,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

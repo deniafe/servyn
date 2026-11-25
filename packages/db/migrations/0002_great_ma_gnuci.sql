@@ -1,0 +1,2 @@
+ALTER TABLE "customer_profiles" ADD COLUMN "age_confirmed_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "customer_profiles" ADD COLUMN "marketing_opt_in" boolean DEFAULT false NOT NULL;

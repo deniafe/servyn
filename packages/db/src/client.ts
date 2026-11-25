@@ -1,7 +1,7 @@
 import "server-only";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "./schema/index.js";
+import * as schema from "./schema/index";
 
 export type DbSchema = typeof schema;
 export type Db = NodePgDatabase<DbSchema>;
@@ -17,15 +17,29 @@ export type DbExecutor = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 let _pool: pg.Pool | undefined;
 let _db: Db | undefined;
 
+export function normalizeConnectionString(raw: string): string {
+  try {
+    const url = new URL(raw);
+    if (url.searchParams.get("sslmode") === "require" && !url.searchParams.has("uselibpqcompat")) {
+      url.searchParams.set("sslmode", "verify-full");
+      return url.toString();
+    }
+  } catch {
+    return raw;
+  }
+  return raw;
+}
+
 /** Return (or lazily create) the singleton Postgres pool + Drizzle instance. */
 export function getDb(): Db {
   if (_db) return _db;
 
-  const connectionString = process.env["DATABASE_URL"];
-  if (!connectionString) {
+  const rawConnectionString = process.env["DATABASE_URL"];
+  if (!rawConnectionString) {
     throw new Error("DATABASE_URL environment variable is not set");
   }
 
+  const connectionString = normalizeConnectionString(rawConnectionString);
   _pool = new pg.Pool({ connectionString });
   _db = drizzle(_pool, { schema });
   return _db;

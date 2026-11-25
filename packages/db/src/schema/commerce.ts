@@ -9,8 +9,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { users } from "./identity.js";
-import { products } from "./catalog.js";
+import { users } from "./identity";
+import { products } from "./catalog";
 
 // ── orders ────────────────────────────────────────────────────────────────────
 export const orders = pgTable(

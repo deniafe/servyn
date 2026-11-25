@@ -36,7 +36,7 @@ import {
   type ExportFormat,
   type ExportJobState,
   type AuditLogMetadata,
-} from "./schema.js";
+} from "./schema";
 
 export interface SupportTicket {
   id: SupportTicketId;

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { vendorProfiles } from "./identity.js";
+import { vendorProfiles } from "./identity";
 
 // ── fee_waivers ───────────────────────────────────────────────────────────────
 export const feeWaivers = pgTable(

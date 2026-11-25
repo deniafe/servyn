@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { users, vendorProfiles } from "./identity.js";
-import { bookings } from "./booking.js";
-import { orders } from "./commerce.js";
+import { users, vendorProfiles } from "./identity";
+import { bookings } from "./booking";
+import { orders } from "./commerce";
 
 // ── reviews ───────────────────────────────────────────────────────────────────
 // A review may only be created from a `completed` booking or `completed` order,

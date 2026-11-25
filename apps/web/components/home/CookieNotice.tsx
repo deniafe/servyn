@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useAuth } from "@clerk/nextjs";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,59 +12,92 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const STORAGE_KEY = "servyn_cookie_consent_v1";
-const CONSENT_EVENT = "servyn-cookie-consent-change";
-
-interface CookiePreferences {
-  essential: true;
-  analytics: boolean;
-  marketing: boolean;
-}
-
-function subscribeConsent(callback: () => void) {
-  window.addEventListener("storage", callback);
-  window.addEventListener(CONSENT_EVENT, callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener(CONSENT_EVENT, callback);
-  };
-}
-
-function getConsentSnapshot(): string | null {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
+import {
+  OPEN_CONSENT_EVENT,
+  parseConsent,
+  readStoredConsentRaw,
+  subscribeConsent,
+  writeStoredConsent,
+} from "@/lib/consent";
 
 function getServerConsentSnapshot(): string | null {
   return "ssr-hidden";
 }
 
-function saveConsent(prefs: CookiePreferences) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-    window.dispatchEvent(new Event(CONSENT_EVENT));
-  } catch {
-    // Ignore storage write failures when cookies/storage are restricted.
-  }
-}
-
 export function CookieNotice() {
   const shouldReduceMotion = useReducedMotion();
-  const storedConsent = React.useSyncExternalStore(
+  const { isSignedIn } = useAuth();
+
+  const storedConsentRaw = React.useSyncExternalStore(
     subscribeConsent,
-    getConsentSnapshot,
-    getServerConsentSnapshot
+    readStoredConsentRaw,
+    getServerConsentSnapshot,
   );
+  const storedConsent = parseConsent(storedConsentRaw);
 
   const [prefsOpen, setPrefsOpen] = React.useState(false);
   const [analytics, setAnalytics] = React.useState(true);
   const [marketing, setMarketing] = React.useState(false);
 
-  const isVisible = storedConsent === null;
+  // Sync from DB when signed in if local storage has no decision yet.
+  React.useEffect(() => {
+    if (!isSignedIn || storedConsent !== null) return;
+    let active = true;
+
+    void fetch("/api/v1/me/consent")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(
+        (
+          data: {
+            ok?: boolean;
+            consent?: { analytics: boolean; marketing: boolean; updatedAt?: string } | null;
+          } | null,
+        ) => {
+          if (!active || !data?.ok || !data.consent) return;
+          writeStoredConsent({
+            analytics: data.consent.analytics,
+            marketing: data.consent.marketing,
+            updatedAt: data.consent.updatedAt,
+          });
+        },
+      )
+      .catch(() => {
+        // Non-blocking: fall back to banner prompt if consent fetch fails.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn, storedConsent]);
+
+  // Listen for programmatic open events (Footer, /account).
+  React.useEffect(() => {
+    const handleOpen = () => {
+      const current = parseConsent(readStoredConsentRaw());
+      if (current) {
+        setAnalytics(current.analytics);
+        setMarketing(current.marketing);
+      }
+      setPrefsOpen(true);
+    };
+    window.addEventListener(OPEN_CONSENT_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_CONSENT_EVENT, handleOpen);
+  }, []);
+
+  function persistConsent(next: { analytics: boolean; marketing: boolean }) {
+    writeStoredConsent(next);
+    if (isSignedIn) {
+      void fetch("/api/v1/me/consent", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      }).catch(() => {
+        // Local consent is already saved; DB sync is best-effort.
+      });
+    }
+  }
+
+  const isVisible = storedConsentRaw === null;
 
   return (
     <>
@@ -100,11 +134,7 @@ export function CookieNotice() {
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={() =>
-                    saveConsent({
-                      essential: true,
-                      analytics: true,
-                      marketing: true,
-                    })
+                    persistConsent({ analytics: true, marketing: true })
                   }
                   className="h-8 cursor-pointer rounded-[8px] bg-gold-500 px-3 text-[12px] font-medium text-gold-ink transition-colors duration-150 ease-standard hover:bg-gold-400"
                 >
@@ -115,11 +145,7 @@ export function CookieNotice() {
                   type="button"
                   whileTap={{ scale: 0.96 }}
                   onClick={() =>
-                    saveConsent({
-                      essential: true,
-                      analytics: false,
-                      marketing: false,
-                    })
+                    persistConsent({ analytics: false, marketing: false })
                   }
                   className="h-8 cursor-pointer rounded-[8px] border border-cream/12 bg-leaf-900 px-3 text-[12px] font-medium text-cream transition-colors duration-150 ease-standard hover:bg-leaf-800"
                 >
@@ -128,7 +154,13 @@ export function CookieNotice() {
 
                 <button
                   type="button"
-                  onClick={() => setPrefsOpen(true)}
+                  onClick={() => {
+                    if (storedConsent) {
+                      setAnalytics(storedConsent.analytics);
+                      setMarketing(storedConsent.marketing);
+                    }
+                    setPrefsOpen(true);
+                  }}
                   className="cursor-pointer px-1 text-[12px] font-normal text-cream-60 underline decoration-cream/30 underline-offset-4 transition-colors duration-150 ease-standard hover:text-cream"
                 >
                   Preferences
@@ -210,7 +242,7 @@ export function CookieNotice() {
             <Button
               type="button"
               onClick={() => {
-                saveConsent({ essential: true, analytics, marketing });
+                persistConsent({ analytics, marketing });
                 setPrefsOpen(false);
               }}
             >

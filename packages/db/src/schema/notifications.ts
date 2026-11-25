@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { users } from "./identity.js";
+import { users } from "./identity";
 
 // ── notifications ─────────────────────────────────────────────────────────────
 export const notifications = pgTable(

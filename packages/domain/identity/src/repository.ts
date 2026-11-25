@@ -39,11 +39,13 @@ import {
   type SafeguardingReportId,
 } from "@servyn/core";
 import {
+  ConsentPreferencesSchema,
   DefaultLocationSchema,
   VerificationMetadataSchema,
+  type ConsentPreferences,
   type DefaultLocation,
   type VerificationMetadata,
-} from "./schema.js";
+} from "./schema";
 
 // ── Domain types ──────────────────────────────────────────────────────────────
 
@@ -53,6 +55,8 @@ export interface User {
   email: string;
   phone: string | null;
   status: "active" | "suspended" | "deleted";
+  isAdmin: boolean;
+  consentPreferences: ConsentPreferences | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +66,8 @@ export interface CustomerProfile {
   userId: UserId;
   displayName: string;
   defaultLocation: DefaultLocation | null;
+  ageConfirmedAt: Date | null;
+  marketingOptIn: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,6 +80,7 @@ export interface VendorProfile {
   description: string | null;
   serviceArea: string | null; // WKT string from PostGIS
   stripeAccountId: string | null;
+  isSeller: boolean;
   verificationStatus: "unverified" | "pending" | "verified" | "rejected";
   ratingAvg: number; // stored * 100 (e.g. 450 = 4.50)
   ratingCount: number;
@@ -113,12 +120,19 @@ export interface SafeguardingReport {
 // ── Row-to-domain mappers ─────────────────────────────────────────────────────
 
 export function mapUser(row: UserRow): User {
+  const consentPreferences =
+    row.consentPreferences !== null && row.consentPreferences !== undefined
+      ? ConsentPreferencesSchema.parse(row.consentPreferences)
+      : null;
+
   return {
     id: asUserId(row.id),
     clerkUserId: row.clerkUserId,
     email: row.email,
     phone: row.phone ?? null,
     status: row.status,
+    isAdmin: row.isAdmin,
+    consentPreferences,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -135,6 +149,8 @@ export function mapCustomerProfile(row: CustomerProfileRow): CustomerProfile {
     userId: asUserId(row.userId),
     displayName: row.displayName,
     defaultLocation,
+    ageConfirmedAt: row.ageConfirmedAt ?? null,
+    marketingOptIn: row.marketingOptIn,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -149,6 +165,7 @@ export function mapVendorProfile(row: VendorProfileRow): VendorProfile {
     description: row.description ?? null,
     serviceArea: row.serviceArea ?? null,
     stripeAccountId: row.stripeAccountId ?? null,
+    isSeller: row.isSeller,
     verificationStatus: row.verificationStatus,
     ratingAvg: row.ratingAvg,
     ratingCount: row.ratingCount,
@@ -230,6 +247,218 @@ export function createIdentityRepository(executor: DbExecutor) {
     async findUserByEmail(email: string): Promise<User | null> {
       const [row] = await executor.select().from(users).where(eq(users.email, email)).limit(1);
       return row ? mapUser(row) : null;
+    },
+
+    async upsertUserByClerkId(data: {
+      clerkUserId: string;
+      email: string;
+      phone?: string | null;
+    }): Promise<User> {
+      const now = new Date();
+
+      // 1. Existing user with matching clerkUserId -> update email/phone
+      const [existingByClerk] = await executor
+        .select()
+        .from(users)
+        .where(eq(users.clerkUserId, data.clerkUserId))
+        .limit(1);
+
+      if (existingByClerk) {
+        const [updated] = await executor
+          .update(users)
+          .set({
+            email: data.email,
+            phone: data.phone ?? null,
+            updatedAt: now,
+          })
+          .where(eq(users.id, existingByClerk.id))
+          .returning();
+        if (!updated) throw new Error("Update user by clerkUserId returned no row");
+        return mapUser(updated);
+      }
+
+      // 2. Recreated Clerk account with the same email -> re-link clerkUserId cleanly
+      const [existingByEmail] = await executor
+        .select()
+        .from(users)
+        .where(eq(users.email, data.email))
+        .limit(1);
+
+      if (existingByEmail) {
+        const [relinked] = await executor
+          .update(users)
+          .set({
+            clerkUserId: data.clerkUserId,
+            phone: data.phone ?? null,
+            status: existingByEmail.status === "deleted" ? "active" : existingByEmail.status,
+            updatedAt: now,
+          })
+          .where(eq(users.id, existingByEmail.id))
+          .returning();
+        if (!relinked) throw new Error("Relink user by email returned no row");
+        return mapUser(relinked);
+      }
+
+      // 3. New user -> insert with onConflictDoUpdate on clerkUserId for concurrency safety
+      const id = newUlid();
+      const [row] = await executor
+        .insert(users)
+        .values({
+          id,
+          clerkUserId: data.clerkUserId,
+          email: data.email,
+          phone: data.phone ?? null,
+          status: "active",
+        })
+        .onConflictDoUpdate({
+          target: users.clerkUserId,
+          set: {
+            email: data.email,
+            phone: data.phone ?? null,
+            updatedAt: now,
+          },
+        })
+        .returning();
+      if (!row) throw new Error("Upsert user returned no row");
+      return mapUser(row);
+    },
+
+    async markUserDeletedByClerkId(clerkUserId: string): Promise<User | null> {
+      const [row] = await executor
+        .update(users)
+        .set({ status: "deleted", updatedAt: new Date() })
+        .where(eq(users.clerkUserId, clerkUserId))
+        .returning();
+      return row ? mapUser(row) : null;
+    },
+
+    async updateUserConsentPreferences(
+      userId: UserId,
+      consentPreferences: ConsentPreferences,
+    ): Promise<User> {
+      const [row] = await executor
+        .update(users)
+        .set({ consentPreferences, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      if (!row) throw new Error("Update user consent preferences returned no row");
+      return mapUser(row);
+    },
+
+    async ensureCustomerProfile(userId: UserId, displayName: string): Promise<CustomerProfile> {
+      const id = newUlid();
+      await executor
+        .insert(customerProfiles)
+        .values({
+          id,
+          userId,
+          displayName,
+          defaultLocation: null,
+        })
+        .onConflictDoNothing({
+          target: customerProfiles.userId,
+        });
+
+      const [row] = await executor
+        .select()
+        .from(customerProfiles)
+        .where(eq(customerProfiles.userId, userId))
+        .limit(1);
+      if (!row) throw new Error("Ensure customer profile returned no row");
+      return mapCustomerProfile(row);
+    },
+
+    async updateCustomerProfileDisplayName(
+      userId: UserId,
+      displayName: string,
+    ): Promise<CustomerProfile> {
+      const [row] = await executor
+        .update(customerProfiles)
+        .set({ displayName, updatedAt: new Date() })
+        .where(eq(customerProfiles.userId, userId))
+        .returning();
+      if (!row) throw new Error("Update customer profile returned no row");
+      return mapCustomerProfile(row);
+    },
+
+    async updateCustomerProfilePreferences(
+      userId: UserId,
+      input: {
+        displayName?: string;
+        ageConfirmed18Plus?: boolean;
+        marketingOptIn?: boolean;
+        defaultLocation?: DefaultLocation;
+      },
+    ): Promise<CustomerProfile> {
+      const updates: {
+        displayName?: string;
+        ageConfirmedAt?: Date;
+        marketingOptIn?: boolean;
+        defaultLocation?: DefaultLocation;
+        updatedAt: Date;
+      } = { updatedAt: new Date() };
+
+      if (input.displayName !== undefined) {
+        updates.displayName = input.displayName;
+      }
+      if (input.ageConfirmed18Plus === true) {
+        updates.ageConfirmedAt = new Date();
+      }
+      if (input.marketingOptIn !== undefined) {
+        updates.marketingOptIn = input.marketingOptIn;
+      }
+      if (input.defaultLocation !== undefined) {
+        updates.defaultLocation = input.defaultLocation;
+      }
+
+      const [row] = await executor
+        .update(customerProfiles)
+        .set(updates)
+        .where(eq(customerProfiles.userId, userId))
+        .returning();
+      if (!row) throw new Error("Update customer profile preferences returned no row");
+      return mapCustomerProfile(row);
+    },
+
+    async enableSellerOnVendorProfile(userId: UserId): Promise<VendorProfile> {
+      const [row] = await executor
+        .update(vendorProfiles)
+        .set({ isSeller: true, updatedAt: new Date() })
+        .where(eq(vendorProfiles.userId, userId))
+        .returning();
+      if (!row) throw new Error("Enable seller on vendor profile returned no row");
+      return mapVendorProfile(row);
+    },
+
+    async findIdentityWithRolesByClerkId(clerkUserId: string): Promise<{
+      user: User;
+      customerProfile: CustomerProfile | null;
+      vendorProfile: VendorProfile | null;
+    } | null> {
+      const [userRow] = await executor
+        .select()
+        .from(users)
+        .where(eq(users.clerkUserId, clerkUserId))
+        .limit(1);
+      if (!userRow) return null;
+
+      const [customerRow] = await executor
+        .select()
+        .from(customerProfiles)
+        .where(eq(customerProfiles.userId, userRow.id))
+        .limit(1);
+
+      const [vendorRow] = await executor
+        .select()
+        .from(vendorProfiles)
+        .where(eq(vendorProfiles.userId, userRow.id))
+        .limit(1);
+
+      return {
+        user: mapUser(userRow),
+        customerProfile: customerRow ? mapCustomerProfile(customerRow) : null,
+        vendorProfile: vendorRow ? mapVendorProfile(vendorRow) : null,
+      };
     },
 
     // ── Customer profiles ───────────────────────────────────────────────────

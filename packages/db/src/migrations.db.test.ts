@@ -11,7 +11,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { sql } from "drizzle-orm";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as schema from "./schema/index.js";
+import * as schema from "./schema/index";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = path.join(__dirname, "../migrations");
@@ -329,5 +329,29 @@ describe("withTransaction", () => {
       SELECT id FROM users WHERE id = ${testId}
     `);
     expect(check.rows).toHaveLength(0);
+  });
+
+  it("defaults users.is_admin and vendor_profiles.is_seller to false", async () => {
+    const cols = await db.execute(sql`
+      SELECT table_name, column_name, column_default
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND ((table_name = 'users' AND column_name = 'is_admin')
+          OR (table_name = 'vendor_profiles' AND column_name = 'is_seller'))
+      ORDER BY table_name
+    `);
+    expect(cols.rows).toHaveLength(2);
+  });
+
+  it("supports nullable users.consent_preferences jsonb round-trip", async () => {
+    const cols = await db.execute(sql`
+      SELECT column_name, is_nullable, data_type
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'users'
+        AND column_name = 'consent_preferences'
+    `);
+    expect(cols.rows).toHaveLength(1);
+    expect((cols.rows[0] as { is_nullable: string }).is_nullable).toBe("YES");
   });
 });

@@ -19,6 +19,7 @@ import {
   BrowseMenu,
 } from "@/components/home/BrowseMenu";
 import { useCart } from "@/components/home/CartProvider";
+import { HeaderAuthSlot } from "@/components/auth/HeaderAuthSlot";
 import { NotificationsMenu } from "@/components/home/NotificationsMenu";
 import {
   Popover,
@@ -41,8 +42,6 @@ const MANCHESTER_AREAS = [
   "Oldham",
 ] as const;
 
-type RoleMode = "customer" | "vendor" | "admin";
-
 const NAV_ITEMS: ReadonlyArray<{
   label: string;
   href: string;
@@ -50,14 +49,8 @@ const NAV_ITEMS: ReadonlyArray<{
 }> = [
   { label: "Services", href: "/services", badge: null },
   { label: "Market", href: "/market", badge: null },
-  // { label: "Bookings", href: "/#how-it-works", badge: null },
-  // { label: "Messages", href: "/#for-providers", badge: 1 },
-];
-
-const ROLES: ReadonlyArray<{ id: RoleMode; label: string }> = [
-  { id: "customer", label: "Customer" },
-  { id: "vendor", label: "Vendor" },
-  { id: "admin", label: "Admin" },
+  { label: "Bookings", href: "/dashboard", badge: null },
+  { label: "Messages", href: "/messages", badge: null },
 ];
 
 export function SiteHeader() {
@@ -67,7 +60,6 @@ export function SiteHeader() {
   const { cartCount, openCart } = useCart();
   const [area, setArea] = React.useState<string>("Hulme");
   const [areaOpen, setAreaOpen] = React.useState(false);
-  const [role, setRole] = React.useState<RoleMode>("customer");
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [mobileBrowseOpen, setMobileBrowseOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
@@ -219,42 +211,6 @@ export function SiteHeader() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2.5">
-            <div
-              role="group"
-              aria-label="Switch view"
-              className="relative hidden grid-cols-3 rounded-full border border-cream/12 bg-leaf-950 p-[3px] min-[921px]:grid"
-            >
-              {ROLES.map((item) => {
-                const pressed = role === item.id;
-                return (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={pressed}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setRole(item.id)}
-                    className={cn(
-                      "relative z-[1] cursor-pointer rounded-full px-3.5 py-1.5 text-center text-[12.5px] font-bold transition-colors duration-200",
-                      pressed ? "text-gold-ink" : "text-cream/70"
-                    )}
-                  >
-                    {pressed && (
-                      <motion.span
-                        layoutId="header-role-thumb"
-                        transition={{
-                          type: "spring",
-                          bounce: 0,
-                          duration: 0.34,
-                        }}
-                        className="absolute inset-0 -z-[1] rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2"
-                      />
-                    )}
-                    {item.label}
-                  </motion.button>
-                );
-              })}
-            </div>
-
             <motion.button
               type="button"
               whileTap={{ scale: 0.88 }}
@@ -302,15 +258,9 @@ export function SiteHeader() {
               </span>
             </motion.button>
 
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.94 }}
-              aria-label="Your account"
-              className="inline-flex size-10 cursor-pointer items-center justify-center rounded-full border-2 border-cream/30 text-[13px] font-extrabold text-gold-ink transition-transform hover:scale-105 hover:shadow-[0_0_0_4px_rgba(242,184,75,0.2)]"
-              style={{ background: "var(--sv-grad-avatar)" }}
-            >
-              AO
-            </motion.button>
+            <React.Suspense fallback={<div className="h-9 w-24 rounded-full bg-cream/10" />}>
+              <HeaderAuthSlot />
+            </React.Suspense>
 
             <motion.button
               type="button"
@@ -449,26 +399,10 @@ export function SiteHeader() {
                 </Link>
               );
             })}
-            <div className="mt-2.5 flex gap-2">
-              {ROLES.map((item) => {
-                const pressed = role === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-pressed={pressed}
-                    onClick={() => setRole(item.id)}
-                    className={cn(
-                      "flex-1 cursor-pointer rounded-[12px] border px-2.5 py-2.5 text-center text-[13px] font-bold transition-colors",
-                      pressed
-                        ? "border-gold-400 bg-gold-400 text-gold-ink"
-                        : "border-cream/20 text-cream"
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
+            <div className="mt-2.5 flex justify-center border-t border-cream-line pt-3">
+              <React.Suspense fallback={<div className="h-9 w-28 rounded-full bg-cream/10" />}>
+                <HeaderAuthSlot />
+              </React.Suspense>
             </div>
           </motion.div>
         )}

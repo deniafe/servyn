@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCart } from "@/components/home/CartProvider";
+import { StripeCheckoutDialog } from "@/components/demo/StripeCheckoutDialog";
 import { MarketProductIllustration } from "@/components/market/MarketProductIllustration";
+import {
+  createInvoiceAndSend,
+  startOrGetConversation,
+  type DemoInvoice,
+} from "@/lib/demo-flow-store";
 import {
   FREE_DELIVERY_THRESHOLD,
   formatGBP,
@@ -34,6 +40,8 @@ export function CartDrawer() {
     clearCart,
   } = useCart();
   const [checkedOut, setCheckedOut] = React.useState(false);
+  const [checkoutInvoice, setCheckoutInvoice] = React.useState<DemoInvoice | null>(null);
+  const [stripeOpen, setStripeOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -47,8 +55,31 @@ export function CartDrawer() {
   }, [isOpen, closeCart]);
 
   function handleCheckout() {
-    clearCart();
-    setCheckedOut(true);
+    if (items.length === 0) return;
+    const first = items[0]!;
+    const summaryTitle =
+      items.length === 1
+        ? `${first.product.title} (x${first.quantity})`
+        : `${first.product.title} + ${items.length - 1} more item(s)`;
+    const conv = startOrGetConversation({
+      kind: "product",
+      providerName: first.product.vendor,
+      providerSlug: "kofis-kitchen",
+      listingTitle: summaryTitle,
+      area: first.product.vendorArea,
+    });
+    const inv = createInvoiceAndSend({
+      conversationId: conv.id,
+      kind: "product",
+      providerName: first.product.vendor,
+      customerName: "Adaeze N.",
+      title: summaryTitle,
+      subtotalMinor: Math.round(total * 100),
+      agreedLocation: first.product.vendorArea,
+      messageText: `Basket checkout initiated for ${summaryTitle}.`,
+    });
+    setCheckoutInvoice(inv);
+    setStripeOpen(true);
   }
 
   function handleClose() {
@@ -62,7 +93,8 @@ export function CartDrawer() {
   );
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {isOpen && (
         <>
           <motion.div
@@ -276,5 +308,16 @@ export function CartDrawer() {
         </>
       )}
     </AnimatePresence>
+
+      <StripeCheckoutDialog
+        invoice={checkoutInvoice}
+        open={stripeOpen}
+        onOpenChange={setStripeOpen}
+        onPaid={() => {
+          clearCart();
+          setCheckedOut(true);
+        }}
+      />
+    </>
   );
 }

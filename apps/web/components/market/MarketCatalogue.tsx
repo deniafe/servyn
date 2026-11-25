@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Boxes,
   Check,
   ChevronDown,
+  MessageSquare,
   Minus,
   Plus,
   Search,
@@ -18,6 +20,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCart } from "@/components/home/CartProvider";
 import { MarketProductIllustration } from "@/components/market/MarketProductIllustration";
+import { startOrGetConversation, useDemoFlow } from "@/lib/demo-flow-store";
 import {
   APPLE_SPRING_SNAPPY,
   useRevealMotion,
@@ -55,6 +58,28 @@ export function MarketCatalogue({
   initialCategory,
   initialMode,
 }: MarketCatalogueProps) {
+  const router = useRouter();
+  const { customProducts } = useDemoFlow();
+  const allProducts = React.useMemo<ReadonlyArray<MarketProduct>>(() => {
+    const mapped: MarketProduct[] = customProducts.map((prd, idx) => ({
+      id: prd.id as MarketProductId,
+      name: prd.title,
+      title: prd.title,
+      category: (categories.find((c) => c === prd.category) ?? "Food & Pantry") as MarketCategory,
+      vendor: prd.sellerName,
+      vendorArea: "Manchester",
+      originNote: prd.originNote,
+      retailPrice: Number((prd.retailPriceMinor / 100).toFixed(2)),
+      bulkPrice: Number((prd.bulkPriceMinor / 100).toFixed(2)),
+      bulkMinQty: prd.minBulkQty,
+      packSize: `${prd.minBulkQty} × ${prd.unit}`,
+      rating: 5.0,
+      sold: 1,
+      featuredOrder: -1 - idx,
+    }));
+    return [...mapped, ...products];
+  }, [customProducts, products, categories]);
+
   const {
     items,
     cartCount,
@@ -99,7 +124,7 @@ export function MarketCatalogue({
   }
 
   const allCategories = categories;
-  const queryMatching = products.filter(matchesQuery);
+  const queryMatching = allProducts.filter(matchesQuery);
 
   const filteredProducts = queryMatching
     .filter((product) => {
@@ -632,6 +657,25 @@ export function MarketCatalogue({
                           )}
                         </AnimatePresence>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const conv = startOrGetConversation({
+                            kind: "product",
+                            providerName: product.vendor,
+                            providerSlug: "kofis-kitchen",
+                            listingTitle: product.title,
+                            area: product.vendorArea,
+                            initialMessage: `Hi ${product.vendor}, interested in ${product.title} — could we discuss a discount or bulk price?`,
+                          });
+                          router.push(`/messages?thread=${encodeURIComponent(conv.id)}`);
+                        }}
+                        className="mt-2.5 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line-2 bg-surface-2 px-3 py-1.5 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-leaf-500 hover:bg-leaf-50"
+                      >
+                        <MessageSquare className="size-3" aria-hidden="true" />
+                        <span>Chat with seller for discount</span>
+                      </button>
                     </div>
                   </div>
                 </motion.article>

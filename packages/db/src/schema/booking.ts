@@ -11,8 +11,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { users, vendorProfiles } from "./identity.js";
-import { services } from "./catalog.js";
+import { users, vendorProfiles } from "./identity";
+import { services } from "./catalog";
 
 // ── availability_rules ────────────────────────────────────────────────────────
 export const availabilityRules = pgTable(

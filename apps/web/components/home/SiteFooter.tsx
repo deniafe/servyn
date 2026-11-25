@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { CookiePreferencesTrigger } from "@/components/home/CookiePreferencesTrigger";
 
 interface FooterColumn {
   heading: string;
@@ -32,7 +33,6 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
       { label: "Cancellation & refunds", href: "/#protected-payments" },
       { label: "Protected payments", href: "/#protected-payments" },
       { label: "Privacy & your data", href: "/#protected-payments" },
-      { label: "Cookie preferences", href: "/#top" },
     ],
   },
 ];
@@ -79,6 +79,11 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              {column.heading === "Support & Policies" ? (
+                <li>
+                  <CookiePreferencesTrigger />
+                </li>
+              ) : null}
             </ul>
           </div>
         ))}

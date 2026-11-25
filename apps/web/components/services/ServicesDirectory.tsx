@@ -41,6 +41,7 @@ import {
   useRevealMotion,
   useStaggerMotion,
 } from "@/components/ui/motion";
+import { formatMinorGBP, useDemoFlow } from "@/lib/demo-flow-store";
 import { cn } from "@/lib/utils";
 
 type SearchMode = "auto" | "ai" | "keyword";
@@ -87,6 +88,84 @@ export function ServicesDirectory({
   initialMode,
   initialCategory,
 }: ServicesDirectoryProps) {
+  const { customServices } = useDemoFlow();
+  const allProviders = React.useMemo<ReadonlyArray<ServiceProvider>>(() => {
+    const mapped: ServiceProvider[] = customServices.map((svc, idx) => {
+      const catMeta =
+        categories.find((c) => c.label.toLowerCase() === svc.category.toLowerCase()) ??
+        categories[0]!;
+      const pricePounds = Math.max(1, Math.round(svc.priceMinor / 100));
+      const initials = svc.providerName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? "")
+        .join("") || "SV";
+      return {
+        id: svc.id,
+        initials,
+        name: svc.providerName,
+        categorySlug: catMeta.slug,
+        categoryLabel: svc.category,
+        area: svc.area,
+        distance: `${(0.8 + idx * 0.3).toFixed(1)} mi`,
+        tagline: svc.title,
+        about: svc.description,
+        joinedLabel: "Joined 2026",
+        completedBookings: 1,
+        serviceRadiusLabel: `${svc.area} & Greater Manchester`,
+        mapPinPosition: { xPercent: 52, yPercent: 48 },
+        nextSlot: "Sat 10:30",
+        slots: ["10:30", "13:30", "15:00"],
+        responseTime: "Replies in ~15 mins",
+        bannerVar: "var(--sv-peach)",
+        rating: 5.0,
+        reviews: 1,
+        duration: `${svc.durationMins} mins`,
+        tags: [svc.title, `${svc.durationMins} mins`, svc.area],
+        startingPrice: pricePounds,
+        avatarColorClass: "bg-peach text-peach-d",
+        bannerBgClass: "bg-peach/60",
+        availableThisWeek: true,
+        verified: true,
+        recommendedOrder: -1 - idx,
+        keywords: [svc.title.toLowerCase(), svc.category.toLowerCase(), svc.area.toLowerCase()],
+        offerings: [
+          {
+            id: svc.id,
+            name: svc.title,
+            description: svc.description,
+            duration: `${svc.durationMins} mins`,
+            price: pricePounds,
+          },
+        ],
+        ratingBreakdown: [
+          { stars: 5, count: 1 },
+          { stars: 4, count: 0 },
+          { stars: 3, count: 0 },
+          { stars: 2, count: 0 },
+          { stars: 1, count: 0 },
+        ],
+        reviewList: [],
+        availability: [
+          {
+            id: "sat-demo",
+            weekday: "Sat",
+            dayNum: 29,
+            monthLabel: "Nov",
+            freeCount: 3,
+            slots: [
+              { time: "10:30", available: true },
+              { time: "13:30", available: true },
+              { time: "15:00", available: true },
+            ],
+          },
+        ],
+      };
+    });
+    return [...mapped, ...providers];
+  }, [customServices, providers, categories]);
+
   const [query, setQuery] = React.useState(initialQuery);
   const [searchMode, setSearchMode] = React.useState<SearchMode>(initialMode);
   const [sortBy, setSortBy] = React.useState<SortOption>("recommended");
@@ -246,7 +325,7 @@ export function ServicesDirectory({
   }
 
   const baseMatching = filterByQuery(
-    providers.filter((p) => matchesNonQueryFilters(p, true)),
+    allProviders.filter((p) => matchesNonQueryFilters(p, true)),
   );
 
   const filteredProviders = filterByQuery(
@@ -1020,6 +1099,27 @@ export function ServicesDirectory({
                 />
               </div>
             </div>
+
+            {searchMode !== "keyword" && query.trim().length > 0 ? (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gold-300 bg-gold-50 px-4 py-3 text-xs text-ink-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 shrink-0 text-gold-600" aria-hidden="true" />
+                  <span>
+                    <strong>AI Match active:</strong> Ranked from your plain-English request using
+                    public listing fields (service, area, availability, price).
+                    {customServices.length > 0
+                      ? ` Includes ${customServices.length} newly published vendor listing (${formatMinorGBP(customServices[0]!.priceMinor)}).`
+                      : ""}
+                  </span>
+                </div>
+                <Link
+                  href="/messages"
+                  className="font-semibold text-leaf-800 underline underline-offset-2"
+                >
+                  Negotiate in chat →
+                </Link>
+              </div>
+            ) : null}
 
             {filteredProviders.length === 0 ? (
               <div className="mt-5 flex flex-col items-center justify-center rounded-[22px] border border-line bg-surface px-6 py-16 text-center shadow-soft">

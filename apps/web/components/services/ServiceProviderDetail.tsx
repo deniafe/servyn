@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,6 +23,12 @@ import {
   HeartPulse,
   useRevealMotion,
 } from "@/components/ui/motion";
+import { StripeCheckoutDialog } from "@/components/demo/StripeCheckoutDialog";
+import {
+  createInvoiceAndSend,
+  startOrGetConversation,
+  type DemoInvoice,
+} from "@/lib/demo-flow-store";
 import type { ServiceProvider } from "@/lib/data/services";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +43,7 @@ export function ServiceProviderDetail({
 }: {
   provider: ServiceProvider;
 }) {
+  const router = useRouter();
   const reduce = useReducedMotion();
   const headerReveal = useRevealMotion();
   const defaultDayId =
@@ -57,6 +65,8 @@ export function ServiceProviderDetail({
   const [messageOpen, setMessageOpen] = React.useState(false);
   const [messageText, setMessageText] = React.useState("");
   const [messageSent, setMessageSent] = React.useState(false);
+  const [checkoutInvoice, setCheckoutInvoice] = React.useState<DemoInvoice | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = React.useState(false);
 
   const selectedOffering =
     provider.offerings.find((item) => item.id === selectedOfferingId) ?? null;
@@ -102,14 +112,45 @@ export function ServiceProviderDetail({
       return;
     }
     setBookingHint(null);
-    setBookingConfirmed(true);
+    const conv = startOrGetConversation({
+      kind: "service",
+      providerName: provider.name,
+      providerSlug: provider.id,
+      listingTitle: selectedOffering.name,
+      area: provider.area,
+    });
+    const dateLabel = activeDay
+      ? `${activeDay.weekday} ${activeDay.dayNum} ${activeDay.monthLabel} · ${selectedTime}`
+      : selectedTime;
+    const inv = createInvoiceAndSend({
+      conversationId: conv.id,
+      kind: "service",
+      providerName: provider.name,
+      customerName: "Adaeze N.",
+      title: selectedOffering.name,
+      subtotalMinor: Math.round(selectedOffering.price * 100),
+      agreedDate: dateLabel,
+      agreedLocation: `${provider.area}, Manchester`,
+      messageText: `Direct booking created for ${selectedOffering.name} (${dateLabel} in ${provider.area}).`,
+    });
+    setCheckoutInvoice(inv);
+    setCheckoutOpen(true);
   }
 
   function handleSendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!messageText.trim()) return;
+    const conv = startOrGetConversation({
+      kind: "service",
+      providerName: provider.name,
+      providerSlug: provider.id,
+      listingTitle: selectedOffering?.name ?? provider.offerings[0]?.name ?? provider.tagline,
+      area: provider.area,
+      initialMessage: messageText,
+    });
     setMessageSent(true);
     setMessageText("");
+    router.push(`/messages?thread=${encodeURIComponent(conv.id)}`);
   }
 
   return (
@@ -993,6 +1034,13 @@ export function ServiceProviderDetail({
           </div>
         </aside>
       </div>
+
+      <StripeCheckoutDialog
+        invoice={checkoutInvoice}
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        onPaid={() => setBookingConfirmed(true)}
+      />
     </div>
   );
 }

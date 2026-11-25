@@ -9,8 +9,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { geometry } from "../geometry.js";
-import { vendorProfiles, users } from "./identity.js";
+import { geometry } from "../geometry";
+import { vendorProfiles, users } from "./identity";
 
 // ── categories ────────────────────────────────────────────────────────────────
 export const categories = pgTable(
