@@ -18,8 +18,8 @@ export default async function SignInPage({
       badgeTone="gold"
       title="Sign in to Servyn"
       subtitle="One account for booking trusted local services, shopping the African market, and managing your business."
-      quote="The enhanced checks badge gave me the confidence to book childcare."
-      quoteAuthor="Priya S. · Salford"
+      quote="Book trusted local specialists in Manchester with protected payments from start to finish."
+      quoteAuthor="Servyn · Manchester"
     >
       <CustomSignInForm redirectUrl={redirectUrl} />
     </AuthShell>

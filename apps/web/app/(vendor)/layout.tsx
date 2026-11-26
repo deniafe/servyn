@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { AuthenticatedShellHeader } from "@/components/auth/AuthenticatedShellHeader";
+import { DashboardShellSkeleton } from "@/components/auth/DashboardShellSkeleton";
 import { requireRole } from "@/lib/auth";
 
 async function VendorGate({ children }: { children: ReactNode }) {
@@ -20,7 +21,7 @@ async function VendorGate({ children }: { children: ReactNode }) {
 
 export default function VendorLayout({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-cream" />}>
+    <Suspense fallback={<DashboardShellSkeleton />}>
       <VendorGate>{children}</VendorGate>
     </Suspense>
   );

@@ -60,8 +60,8 @@ export function ContactFormClient() {
               <MapPin className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <p className="font-semibold text-ink">Registered Office</p>
-              <p className="text-mut">Servyn Ltd, 20-22 Wenlock Road, London N1 7GU</p>
+              <p className="font-semibold text-ink">Location</p>
+              <p className="text-mut">Manchester, United Kingdom</p>
             </div>
           </div>
         </div>

@@ -24,6 +24,9 @@ function hasMfaClaim(sessionClaims: unknown): boolean {
 }
 
 export default clerkMiddleware(async (auth, req) => {
+  if (req.nextUrl.pathname === "/api/v1/marketplace/listings" && req.method === "GET") {
+    return;
+  }
   if (!isProtectedRoute(req)) return;
 
   const session = await auth.protect();

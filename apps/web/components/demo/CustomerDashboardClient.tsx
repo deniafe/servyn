@@ -71,7 +71,8 @@ export function CustomerDashboardClient({
   const stripePaidId = searchParams.get("stripe_paid");
   const stripeSessionId = searchParams.get("session_id");
 
-  const { invoices, reviews, referralCreditActive, savedVendorSlugs } = useDemoFlow();
+  const { invoices, reviews, referralCreditActive, savedVendorSlugs, currentUserId } =
+    useDemoFlow();
   const [lookupQuery, setLookupQuery] = React.useState("");
   const [copiedInvite, setCopiedInvite] = React.useState(false);
 
@@ -94,16 +95,26 @@ export function CustomerDashboardClient({
     }
   }, [stripePaidId, stripeSessionId]);
 
-  const heldMinor = invoices
+  const providerInvoices = invoices.filter(
+    (inv) => Boolean(currentUserId && inv.providerUserId === currentUserId),
+  );
+  const customerInvoices = invoices.filter(
+    (inv) => !(currentUserId && inv.providerUserId === currentUserId),
+  );
+  const releasedEarningsMinor = providerInvoices
+    .filter((i) => i.status === "released")
+    .reduce((sum, i) => sum + i.subtotalMinor, 0);
+
+  const heldMinor = customerInvoices
     .filter((i) => i.status === "paid_held" || i.status === "delivered" || i.status === "disputed")
     .reduce((sum, i) => sum + i.totalMinor, 0);
 
   const trimmedLookup = lookupQuery.trim().toLowerCase();
   const visibleInvoices = trimmedLookup
-    ? invoices.filter((inv) =>
+    ? customerInvoices.filter((inv) =>
         `${inv.refId} ${inv.title} ${inv.providerName}`.toLowerCase().includes(trimmedLookup),
       )
-    : invoices;
+    : customerInvoices;
 
   function handleCopyInvite() {
     const url =
@@ -266,6 +277,25 @@ export function CustomerDashboardClient({
 
       {/* Main customer surface */}
       <div className="space-y-6">
+        {releasedEarningsMinor > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gold-300 bg-gold-50 p-4 text-xs">
+            <span className="inline-flex items-center gap-2 font-semibold text-ink">
+              <CheckCircle2 className="size-5 shrink-0 text-leaf-700" aria-hidden="true" />
+              <span>
+                You&apos;ve been paid!{" "}
+                <strong>{formatMinorGBP(releasedEarningsMinor)}</strong> has been released from
+                completed sales &amp; bookings.
+              </span>
+            </span>
+            <Link
+              href={isVendor ? "/vendor" : isSeller ? "/seller" : "/messages"}
+              className="rounded-full bg-leaf-800 px-3.5 py-1.5 font-semibold text-cream hover:bg-leaf-700"
+            >
+              View earnings →
+            </Link>
+          </div>
+        ) : null}
+
         {stripePaidId ? (
           <div className="flex items-center gap-3 rounded-lg border border-leaf-300 bg-mint p-4 text-xs font-semibold text-mint-d">
             <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
@@ -339,6 +369,73 @@ export function CustomerDashboardClient({
             </Link>
           </div>
         </section>
+
+        {/* Provider Sales & Earnings Received (no Rebook button) */}
+        {providerInvoices.length > 0 ? (
+          <section className="space-y-4 rounded-[18px] border border-line bg-surface p-6 shadow-soft">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-serif text-xl font-semibold text-ink">
+                  Sales &amp; Earnings Received
+                </h2>
+                <p className="text-xs text-mut">
+                  Orders &amp; bookings where you are the vendor or seller.
+                </p>
+              </div>
+              <span className="rounded-full bg-mint px-3 py-1 text-xs font-bold text-mint-d">
+                Released: {formatMinorGBP(releasedEarningsMinor)}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {providerInvoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface-2 p-4 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-leaf-900 px-2 py-0.5 text-[10px] font-bold text-gold-300">
+                        {inv.refId}
+                      </span>
+                      <p className="font-serif text-base font-semibold text-ink">{inv.title}</p>
+                    </div>
+                    <p className="mt-0.5 text-mut">Customer: {inv.customerName}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="font-serif text-base font-semibold tabular-nums text-leaf-900">
+                      +{formatMinorGBP(inv.subtotalMinor)}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 font-bold",
+                        inv.status === "released"
+                          ? "bg-mint text-mint-d"
+                          : inv.status === "disputed" || inv.status === "refunded"
+                            ? "bg-blush text-blush-d"
+                            : "bg-sky text-sky-d",
+                      )}
+                    >
+                      {inv.status === "released"
+                        ? "Paid & Released"
+                        : inv.status === "paid_held" || inv.status === "delivered"
+                          ? "Held pending confirmation"
+                          : inv.status === "sent"
+                            ? "Invoice sent"
+                            : inv.status}
+                    </span>
+                    <Link
+                      href={`/messages?thread=${encodeURIComponent(inv.conversationId)}`}
+                      className="rounded-full border border-line-2 bg-surface px-3 py-1.5 font-semibold text-ink hover:border-gold-400"
+                    >
+                      Open chat
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Protected Payment Bookings & Orders + Reference ID Lookup */}
         <section className="space-y-4 rounded-[18px] border border-line bg-surface p-6 shadow-soft">

@@ -212,6 +212,12 @@ export function SiteHeader() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2.5">
+            <Link
+              href="/list"
+              className="hidden shrink-0 whitespace-nowrap rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3.5 py-1.5 text-xs font-bold text-gold-ink shadow-gold transition-all hover:brightness-105 sm:inline-flex"
+            >
+              + List
+            </Link>
             <motion.button
               type="button"
               whileTap={{ scale: 0.88 }}
@@ -396,10 +402,19 @@ export function SiteHeader() {
                 </Link>
               );
             })}
-            <div className="mt-2.5 flex justify-center border-t border-cream-line pt-3">
-              <React.Suspense fallback={<div className="h-9 w-28 rounded-full bg-cream/10" />}>
-                <HeaderAuthSlot />
-              </React.Suspense>
+            <div className="mt-2.5 flex flex-col gap-2.5 border-t border-cream-line pt-3">
+              <Link
+                href="/list"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2.5 text-sm font-bold text-gold-ink shadow-gold"
+              >
+                + List a service or product
+              </Link>
+              <div className="flex justify-center">
+                <React.Suspense fallback={<div className="h-9 w-28 rounded-full bg-cream/10" />}>
+                  <HeaderAuthSlot />
+                </React.Suspense>
+              </div>
             </div>
           </motion.div>
         )}

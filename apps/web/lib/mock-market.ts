@@ -17,6 +17,11 @@ export type PricingMode = "retail" | "bulk";
 
 export interface MarketProduct {
   id: MarketProductId;
+  slug?: string;
+  ownerUserId?: string;
+  photos?: ReadonlyArray<string>;
+  stock?: number;
+  unit?: string;
   vendor: string;
   vendorArea: string;
   title: string;

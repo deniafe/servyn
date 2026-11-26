@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import {
   CreditCard,
   Minus,
@@ -26,6 +27,12 @@ import {
 } from "@/lib/mock-market";
 
 export function CartDrawer() {
+  const { user } = useUser();
+  const currentUserName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Customer";
   const shouldReduceMotion = useReducedMotion();
   const {
     items,
@@ -67,18 +74,20 @@ export function CartDrawer() {
       providerSlug: "kofis-kitchen",
       listingTitle: summaryTitle,
       area: first.product.vendorArea,
+      customerName: currentUserName,
     });
     const inv = createInvoiceAndSend({
       conversationId: conv.id,
       kind: "product",
       providerName: first.product.vendor,
-      customerName: "Adaeze N.",
+      customerName: currentUserName,
       title: summaryTitle,
       subtotalMinor: Math.round(total * 100),
       agreedLocation: first.product.vendorArea,
       messageText: `Basket checkout initiated for ${summaryTitle}.`,
     });
     setCheckoutInvoice(inv);
+    closeCart();
     setStripeOpen(true);
   }
 
@@ -298,8 +307,7 @@ export function CartDrawer() {
                     aria-hidden="true"
                   />
                   <span>
-                    Demo checkout — no real charge. Payments via regulated
-                    partners.
+                    Protected payment powered by Stripe.
                   </span>
                 </p>
               </div>

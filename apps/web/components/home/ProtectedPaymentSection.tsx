@@ -25,7 +25,7 @@ const STEPS: ReadonlyArray<PaymentStep> = [
     step: 1,
     icon: CreditCard,
     title: "Book & pay",
-    body: "Payment linked to the booking; the provider's share sits in their own Stripe account.",
+    body: "Payment is processed by Stripe and held until the service is completed and confirmed.",
   },
   {
     step: 2,

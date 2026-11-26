@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   Boxes,
   Check,
@@ -59,10 +62,21 @@ export function MarketCatalogue({
   initialMode,
 }: MarketCatalogueProps) {
   const router = useRouter();
-  const { customProducts } = useDemoFlow();
+  const { user } = useUser();
+  const currentUserName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Customer";
+  const { customProducts, currentUserId } = useDemoFlow();
   const allProducts = React.useMemo<ReadonlyArray<MarketProduct>>(() => {
     const mapped: MarketProduct[] = customProducts.map((prd, idx) => ({
       id: prd.id as MarketProductId,
+      slug: prd.slug ?? prd.id,
+      ownerUserId: prd.ownerUserId,
+      photos: prd.photos,
+      stock: prd.stock,
+      unit: prd.unit,
       name: prd.title,
       title: prd.title,
       category: (categories.find((c) => c === prd.category) ?? "Food & Pantry") as MarketCategory,
@@ -74,7 +88,7 @@ export function MarketCatalogue({
       bulkMinQty: prd.minBulkQty,
       packSize: `${prd.minBulkQty} × ${prd.unit}`,
       rating: 5.0,
-      sold: 1,
+      sold: 0,
       featuredOrder: -1 - idx,
     }));
     return [...mapped, ...products];
@@ -176,6 +190,14 @@ export function MarketCatalogue({
                 fulfilled directly by Manchester makers — retail for your home,
                 wholesale for your salon or shop.
               </p>
+              <div className="mt-4">
+                <Link
+                  href="/list?kind=product"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2 text-xs font-bold text-gold-ink shadow-gold hover:brightness-105"
+                >
+                  <span>+ Sell a product</span>
+                </Link>
+              </div>
             </motion.div>
 
             <div className="flex flex-col items-start lg:items-end">
@@ -486,26 +508,39 @@ export function MarketCatalogue({
                   className="group flex flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-soft transition-[box-shadow,border-color] duration-200 hover:border-line-2 hover:shadow-lift"
                 >
                   {/* Editorial Product Plinth */}
-                  <div className="relative flex aspect-[4/3.35] items-center justify-center overflow-hidden border-b border-line/70 bg-linear-to-b from-surface-2 via-gold-50/70 to-butter/55 p-5">
+                  <Link
+                    href={`/market/${encodeURIComponent(product.slug ?? product.id)}`}
+                    className="relative flex aspect-[4/3.35] items-center justify-center overflow-hidden border-b border-line/70 bg-linear-to-b from-surface-2 via-gold-50/70 to-butter/55 p-5"
+                  >
                     {pricingMode === "bulk" ? (
-                      <span className="absolute top-3 left-3 rounded-full bg-leaf-900 px-2.5 py-0.5 text-[11px] font-bold text-gold-300 shadow-xs">
+                      <span className="absolute top-3 left-3 z-[2] rounded-full bg-leaf-900 px-2.5 py-0.5 text-[11px] font-bold text-gold-300 shadow-xs">
                         Save {discountPct}%
                       </span>
                     ) : product.lowStockLabel ? (
-                      <span className="absolute top-3 left-3 rounded-full bg-gold-500 px-2.5 py-0.5 text-[11px] font-bold text-gold-ink shadow-xs">
+                      <span className="absolute top-3 left-3 z-[2] rounded-full bg-gold-500 px-2.5 py-0.5 text-[11px] font-bold text-gold-ink shadow-xs">
                         {product.lowStockLabel}
                       </span>
                     ) : null}
 
-                    <span className="absolute top-3 right-3 rounded-full border border-line/80 bg-surface/90 px-2.5 py-0.5 text-[11px] font-semibold text-ink-2">
+                    <span className="absolute top-3 right-3 z-[2] rounded-full border border-line/80 bg-surface/90 px-2.5 py-0.5 text-[11px] font-semibold text-ink-2">
                       {product.packSize}
                     </span>
 
-                    <MarketProductIllustration
-                      id={product.id}
-                      className="transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                    />
-                  </div>
+                    {product.photos && product.photos.length > 0 ? (
+                      <Image
+                        src={product.photos[0]!}
+                        alt={product.name}
+                        fill
+                        unoptimized
+                        className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+                      />
+                    ) : (
+                      <MarketProductIllustration
+                        id={product.id}
+                        className="transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+                      />
+                    )}
+                  </Link>
 
                   {/* Card Body */}
                   <div className="flex flex-1 flex-col p-4">
@@ -520,11 +555,14 @@ export function MarketCatalogue({
                       </span>
                     </p>
 
-                    <h2 className="mt-1 font-serif text-[16px] leading-snug font-semibold text-ink">
+                    <Link
+                      href={`/market/${encodeURIComponent(product.slug ?? product.id)}`}
+                      className="mt-1 block font-serif text-[16px] leading-snug font-semibold text-ink hover:text-leaf-700"
+                    >
                       {product.name}
-                    </h2>
+                    </Link>
 
-                    <p className="mt-1 text-[12.5px] leading-snug text-ink-2">
+                    <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink-2">
                       {product.originNote}
                     </p>
 
@@ -658,24 +696,37 @@ export function MarketCatalogue({
                         </AnimatePresence>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const conv = startOrGetConversation({
-                            kind: "product",
-                            providerName: product.vendor,
-                            providerSlug: "kofis-kitchen",
-                            listingTitle: product.title,
-                            area: product.vendorArea,
-                            initialMessage: `Hi ${product.vendor}, interested in ${product.title} — could we discuss a discount or bulk price?`,
-                          });
-                          router.push(`/messages?thread=${encodeURIComponent(conv.id)}`);
-                        }}
-                        className="mt-2.5 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line-2 bg-surface-2 px-3 py-1.5 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-leaf-500 hover:bg-leaf-50"
-                      >
-                        <MessageSquare className="size-3" aria-hidden="true" />
-                        <span>Chat with seller for discount</span>
-                      </button>
+                      {currentUserId && product.ownerUserId === currentUserId ? (
+                        <Link
+                          href="/messages"
+                          className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-leaf-200 bg-mint/40 px-3 py-1.5 text-[11.5px] font-semibold text-mint-d"
+                        >
+                          <span>Your listing · View customer enquiries</span>
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const liveMatch = customProducts.find((p) => p.id === product.id);
+                            const conv = startOrGetConversation({
+                              kind: "product",
+                              listingId: liveMatch?.id,
+                              providerName: product.vendor,
+                              providerSlug: liveMatch?.slug ?? "kofis-kitchen",
+                              providerUserId: liveMatch?.ownerUserId,
+                              listingTitle: product.title,
+                              area: product.vendorArea,
+                              customerName: currentUserName,
+                              initialMessage: `Hi ${product.vendor}, interested in ${product.title} — could we discuss a discount or bulk price?`,
+                            });
+                            router.push(`/messages?thread=${encodeURIComponent(conv.id)}`);
+                          }}
+                          className="mt-2.5 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-line-2 bg-surface-2 px-3 py-1.5 text-[11.5px] font-semibold text-ink-2 transition-colors hover:border-leaf-500 hover:bg-leaf-50"
+                        >
+                          <MessageSquare className="size-3" aria-hidden="true" />
+                          <span>Chat with seller for discount</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </motion.article>

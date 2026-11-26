@@ -49,10 +49,8 @@ const DEMO_USERS = [
 
 export function AdminConsoleClient({
   adminEmail,
-  isDemoPreview = false,
 }: {
   adminEmail: string;
-  isDemoPreview?: boolean;
 }) {
   const { invoices, pendingVendors, customServices, customProducts } = useDemoFlow();
   const [tab, setTab] = React.useState<AdminTab>("overview");
@@ -117,7 +115,7 @@ export function AdminConsoleClient({
           <div className="flex items-center justify-between gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-200 px-3 py-1 text-[11px] font-bold text-gold-ink">
               <ShieldCheck className="size-3.5" aria-hidden="true" />
-              <span>{isDemoPreview ? "Admin Preview" : "Admin · MFA"}</span>
+              <span>Admin · MFA</span>
             </span>
           </div>
 
@@ -172,7 +170,7 @@ export function AdminConsoleClient({
         <div className="mt-6 border-t border-cream/12 pt-4 text-[11px] text-cream-60">
           <p className="font-semibold text-cream">Operator</p>
           <p className="truncate">{adminEmail}</p>
-          <p className="mt-1">All dispute resolutions &amp; approvals update the live demo ledger.</p>
+          <p className="mt-1">All dispute resolutions &amp; approvals update the platform ledger.</p>
         </div>
       </aside>
 

@@ -13,33 +13,46 @@ export type DemoInvoiceStatus =
 export interface DemoServiceListing {
   id: string;
   slug: string;
+  ownerUserId?: string;
   providerName: string;
   title: string;
   category: string;
   area: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
   durationMins: number;
   priceMinor: number;
   description: string;
+  photos?: string[];
   createdAt: string;
 }
 
 export interface DemoProductListing {
   id: string;
+  slug?: string;
+  ownerUserId?: string;
   sellerName: string;
   title: string;
   category: string;
+  area?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
   retailPriceMinor: number;
   bulkPriceMinor: number;
   minBulkQty: number;
   stock: number;
   unit: string;
   originNote: string;
+  photos?: string[];
   createdAt: string;
 }
 
 export interface DemoMessage {
   id: string;
   sender: "customer" | "provider";
+  senderName?: string;
   text: string;
   at: string;
   invoiceId?: string;
@@ -48,6 +61,9 @@ export interface DemoMessage {
 export interface DemoConversation {
   id: string;
   kind: "service" | "product";
+  listingId?: string;
+  providerUserId?: string;
+  customerUserId?: string;
   providerName: string;
   providerSlug: string;
   listingTitle: string;
@@ -62,6 +78,8 @@ export interface DemoInvoice {
   refId: string;
   conversationId: string;
   kind: "service" | "product";
+  customerUserId?: string;
+  providerUserId?: string;
   providerName: string;
   customerName: string;
   title: string;
@@ -147,6 +165,7 @@ export interface DemoPortfolioPhoto {
 }
 
 export interface DemoFlowState {
+  currentUserId: string | null;
   customServices: DemoServiceListing[];
   customProducts: DemoProductListing[];
   conversations: DemoConversation[];
@@ -268,9 +287,10 @@ const SEED_PENDING_VENDORS: DemoPendingVendor[] = [
 ];
 
 const SEED_STATE: DemoFlowState = {
+  currentUserId: null,
   customServices: [],
   customProducts: [],
-  referralCreditActive: true,
+  referralCreditActive: false,
   vendorAvailability: {
     workingDays: DEFAULT_WORKING_DAYS,
     blockedDates: [],
@@ -416,6 +436,7 @@ function parseState(raw: string): DemoFlowState {
       refId: inv.refId || `SRV-${String(100000 + idx).slice(-6)}`,
     }));
     return {
+      currentUserId: typeof parsed.currentUserId === "string" ? parsed.currentUserId : null,
       customServices: Array.isArray(parsed.customServices) ? parsed.customServices : [],
       customProducts: Array.isArray(parsed.customProducts) ? parsed.customProducts : [],
       conversations: Array.isArray(parsed.conversations)
@@ -465,6 +486,184 @@ function updateState(updater: (prev: DemoFlowState) => DemoFlowState): DemoFlowS
   return next;
 }
 
+interface RawListingDto {
+  id: string;
+  kind: "service" | "product";
+  ownerUserId: string;
+  ownerName: string;
+  slug: string;
+  title: string;
+  category: string;
+  area: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  description: string;
+  priceMinor: number;
+  bulkPriceMinor?: number | null;
+  minBulkQty?: number | null;
+  durationMins?: number | null;
+  stock?: number | null;
+  unit?: string | null;
+  photos?: string[] | null;
+  createdAt: string;
+}
+
+let syncInFlight = false;
+
+export async function syncPublicListings(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const res = await fetch("/api/v1/marketplace/listings", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as { ok?: boolean; listings?: RawListingDto[] };
+    if (!data.ok || !Array.isArray(data.listings)) return;
+
+    const services: DemoServiceListing[] = [];
+    const products: DemoProductListing[] = [];
+
+    for (const row of data.listings) {
+      if (row.kind === "service") {
+        services.push({
+          id: row.id,
+          slug: row.slug,
+          ownerUserId: row.ownerUserId,
+          providerName: row.ownerName,
+          title: row.title,
+          category: row.category,
+          area: row.area,
+          address: row.address ?? undefined,
+          lat: typeof row.lat === "number" ? row.lat : undefined,
+          lng: typeof row.lng === "number" ? row.lng : undefined,
+          durationMins: row.durationMins ?? 60,
+          priceMinor: row.priceMinor,
+          description: row.description,
+          photos: Array.isArray(row.photos) ? row.photos : [],
+          createdAt: row.createdAt,
+        });
+      } else {
+        products.push({
+          id: row.id,
+          slug: row.slug,
+          ownerUserId: row.ownerUserId,
+          sellerName: row.ownerName,
+          title: row.title,
+          category: row.category,
+          retailPriceMinor: row.priceMinor,
+          bulkPriceMinor: row.bulkPriceMinor ?? row.priceMinor,
+          minBulkQty: row.minBulkQty ?? 5,
+          stock: row.stock ?? 20,
+          unit: row.unit ?? "item",
+          originNote: row.description,
+          photos: Array.isArray(row.photos) ? row.photos : [],
+          createdAt: row.createdAt,
+        });
+      }
+    }
+
+    updateState((prev) => ({
+      ...prev,
+      customServices: services,
+      customProducts: products,
+    }));
+  } catch {
+    // Ignore transient network errors.
+  }
+}
+
+export async function syncUserMarketplaceState(): Promise<void> {
+  if (typeof window === "undefined" || syncInFlight) return;
+  syncInFlight = true;
+  try {
+    const res = await fetch("/api/v1/marketplace/state", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      ok?: boolean;
+      currentUserId?: string;
+      conversations?: DemoConversation[];
+      invoices?: DemoInvoice[];
+      reviews?: DemoReview[];
+    };
+    if (!data.ok) return;
+
+    updateState((prev) => {
+      const dbConvs = Array.isArray(data.conversations) ? data.conversations : [];
+      const dbConvIds = new Set(dbConvs.map((c) => c.id));
+      const mergedConvs = [
+        ...dbConvs,
+        ...prev.conversations.filter((c) => !dbConvIds.has(c.id)),
+      ];
+
+      const dbInvs = Array.isArray(data.invoices) ? data.invoices : [];
+      const dbInvIds = new Set(dbInvs.map((i) => i.id));
+      const mergedInvs = [
+        ...dbInvs,
+        ...prev.invoices.filter((i) => !dbInvIds.has(i.id)),
+      ];
+
+      const dbRevs = Array.isArray(data.reviews) ? data.reviews : [];
+      const dbRevIds = new Set(dbRevs.map((r) => r.id));
+      const mergedRevs = [
+        ...dbRevs,
+        ...prev.reviews.filter((r) => !dbRevIds.has(r.id)),
+      ];
+
+      return {
+        ...prev,
+        currentUserId: data.currentUserId ?? prev.currentUserId,
+        conversations: mergedConvs,
+        invoices: mergedInvs,
+        reviews: mergedRevs,
+      };
+    });
+  } catch {
+    // Ignore transient network errors.
+  } finally {
+    syncInFlight = false;
+  }
+}
+
+export async function publishLiveListing(input: {
+  kind: "service" | "product";
+  title: string;
+  category: string;
+  area: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  description: string;
+  priceMinor: number;
+  bulkPriceMinor?: number;
+  minBulkQty?: number;
+  durationMins?: number;
+  stock?: number;
+  unit?: string;
+  photos?: string[];
+}): Promise<{ ok: true; listing: RawListingDto } | { ok: false; message: string }> {
+  try {
+    const res = await fetch("/api/v1/marketplace/listings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const data = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      listing?: RawListingDto;
+      error?: { message?: string };
+    } | null;
+    if (!res.ok || !data?.ok || !data.listing) {
+      return {
+        ok: false,
+        message: data?.error?.message ?? "Please sign in to publish a listing.",
+      };
+    }
+    await syncPublicListings();
+    return { ok: true, listing: data.listing };
+  } catch {
+    return { ok: false, message: "Network error publishing listing." };
+  }
+}
+
 export function slugify(input: string): string {
   return (
     input
@@ -488,6 +687,16 @@ export function addServiceListing(
     ...prev,
     customServices: [listing, ...prev.customServices],
   }));
+  void publishLiveListing({
+    kind: "service",
+    title: input.title,
+    category: input.category,
+    area: input.area,
+    description: input.description,
+    priceMinor: input.priceMinor,
+    durationMins: input.durationMins,
+    photos: input.photos ?? [],
+  });
   return listing;
 }
 
@@ -503,19 +712,35 @@ export function addProductListing(
     ...prev,
     customProducts: [product, ...prev.customProducts],
   }));
+  void publishLiveListing({
+    kind: "product",
+    title: input.title,
+    category: input.category,
+    area: "Manchester",
+    description: input.originNote,
+    priceMinor: input.retailPriceMinor,
+    bulkPriceMinor: input.bulkPriceMinor,
+    minBulkQty: input.minBulkQty,
+    stock: input.stock,
+    unit: input.unit,
+    photos: input.photos ?? [],
+  });
   return product;
 }
 
 export function startOrGetConversation(input: {
   kind: "service" | "product";
+  listingId?: string;
   providerName: string;
   providerSlug: string;
+  providerUserId?: string;
   listingTitle: string;
   area: string;
   customerName?: string;
   initialMessage?: string;
 }): DemoConversation {
   let target: DemoConversation | undefined;
+  let isNew = false;
   updateState((prev) => {
     const existing = prev.conversations.find(
       (c) =>
@@ -525,18 +750,28 @@ export function startOrGetConversation(input: {
     );
     const now = new Date().toISOString();
     if (existing) {
+      const nextCustomerName = input.customerName?.trim() || existing.customerName;
       if (input.initialMessage?.trim()) {
         const msg: DemoMessage = {
           id: `msg-${Date.now()}`,
           sender: "customer",
+          senderName: nextCustomerName,
           text: input.initialMessage.trim(),
           at: now,
         };
         target = {
           ...existing,
+          customerName: nextCustomerName,
           updatedAt: now,
           messages: [...existing.messages, msg],
         };
+        return {
+          ...prev,
+          conversations: prev.conversations.map((c) => (c.id === existing.id ? target! : c)),
+        };
+      }
+      if (nextCustomerName !== existing.customerName) {
+        target = { ...existing, customerName: nextCustomerName };
         return {
           ...prev,
           conversations: prev.conversations.map((c) => (c.id === existing.id ? target! : c)),
@@ -546,20 +781,24 @@ export function startOrGetConversation(input: {
       return prev;
     }
 
+    isNew = true;
     const created: DemoConversation = {
       id: `conv-${Date.now()}`,
       kind: input.kind,
+      listingId: input.listingId,
+      providerUserId: input.providerUserId,
       providerName: input.providerName,
       providerSlug: input.providerSlug,
       listingTitle: input.listingTitle,
       area: input.area,
-      customerName: input.customerName ?? "Adaeze N.",
+      customerName: input.customerName ?? "Customer",
       updatedAt: now,
       messages: input.initialMessage?.trim()
         ? [
             {
               id: `msg-${Date.now()}`,
               sender: "customer",
+              senderName: input.customerName ?? "Customer",
               text: input.initialMessage.trim(),
               at: now,
             },
@@ -572,6 +811,26 @@ export function startOrGetConversation(input: {
       conversations: [created, ...prev.conversations],
     };
   });
+
+  if (typeof window !== "undefined") {
+    void fetch("/api/v1/marketplace/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: isNew ? target?.id : undefined,
+        kind: input.kind,
+        listingId: input.listingId,
+        providerName: input.providerName,
+        providerSlug: input.providerSlug,
+        providerUserId: input.providerUserId,
+        listingTitle: input.listingTitle,
+        area: input.area,
+        customerName: input.customerName,
+        initialMessage: input.initialMessage,
+      }),
+    }).then(() => syncUserMarketplaceState()).catch(() => {});
+  }
+
   return target!;
 }
 
@@ -597,6 +856,68 @@ export function sendMessage(
       c.id === conversationId ? { ...c, updatedAt: now, messages: [...c.messages, msg] } : c,
     ),
   }));
+  if (typeof window !== "undefined") {
+    void fetch("/api/v1/marketplace/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversationId, senderRole: sender, text: trimmed }),
+    }).then(() => syncUserMarketplaceState()).catch(() => {});
+  }
+}
+
+export function deleteMessage(conversationId: string, messageId: string): void {
+  updateState((prev) => ({
+    ...prev,
+    conversations: prev.conversations.map((c) =>
+      c.id === conversationId
+        ? { ...c, messages: c.messages.filter((m) => m.id !== messageId) }
+        : c,
+    ),
+  }));
+  if (typeof window !== "undefined") {
+    void fetch(`/api/v1/marketplace/messages/${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    }).catch(() => {});
+  }
+}
+
+export function deleteConversation(conversationId: string): void {
+  updateState((prev) => ({
+    ...prev,
+    conversations: prev.conversations.filter((c) => c.id !== conversationId),
+    invoices: prev.invoices.filter(
+      (inv) => !(inv.conversationId === conversationId && inv.status === "sent"),
+    ),
+  }));
+  if (typeof window !== "undefined") {
+    void fetch(`/api/v1/marketplace/conversations/${encodeURIComponent(conversationId)}`, {
+      method: "DELETE",
+    })
+      .then(() => syncUserMarketplaceState())
+      .catch(() => {});
+  }
+}
+
+export function retractInvoice(invoiceId: string): void {
+  updateState((prev) => {
+    const target = prev.invoices.find((inv) => inv.id === invoiceId);
+    if (!target || target.status !== "sent") return prev;
+    return {
+      ...prev,
+      invoices: prev.invoices.filter((inv) => inv.id !== invoiceId),
+      conversations: prev.conversations.map((c) => ({
+        ...c,
+        messages: c.messages.filter((m) => m.invoiceId !== invoiceId),
+      })),
+    };
+  });
+  if (typeof window !== "undefined") {
+    void fetch(`/api/v1/marketplace/invoices/${encodeURIComponent(invoiceId)}`, {
+      method: "DELETE",
+    })
+      .then(() => syncUserMarketplaceState())
+      .catch(() => {});
+  }
 }
 
 export function createInvoiceAndSend(input: {
@@ -673,7 +994,77 @@ export function createInvoiceAndSend(input: {
     };
   });
 
+  if (typeof window !== "undefined") {
+    void fetch("/api/v1/marketplace/invoices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: invoice.id,
+        refId: invoice.refId,
+        conversationId: input.conversationId,
+        title: input.title,
+        subtotalMinor: input.subtotalMinor,
+        agreedDate: input.agreedDate,
+        agreedLocation: input.agreedLocation,
+        originalAmountMinor: input.originalAmountMinor,
+        discountNote: input.discountNote,
+        messageText: input.messageText,
+      }),
+    }).then(() => syncUserMarketplaceState()).catch(() => {});
+  }
+
   return invoice;
+}
+
+function syncInvoiceAction(invoiceId: string, payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  void fetch(`/api/v1/marketplace/invoices/${encodeURIComponent(invoiceId)}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(() => syncUserMarketplaceState()).catch(() => {});
+}
+
+export function updateServiceOfferBookingDetails(
+  invoiceId: string,
+  patch: {
+    title: string;
+    agreedDate: string;
+    agreedLocation?: string;
+    subtotalMinor: number;
+  },
+): DemoInvoice | null {
+  let updatedInvoice: DemoInvoice | null = null;
+  const feeMinor = computeServynFeeMinor(patch.subtotalMinor, false);
+
+  updateState((prev) => ({
+    ...prev,
+    invoices: prev.invoices.map((inv) => {
+      if (inv.id !== invoiceId || inv.status !== "sent") return inv;
+      updatedInvoice = {
+        ...inv,
+        title: patch.title,
+        agreedDate: patch.agreedDate,
+        agreedLocation: patch.agreedLocation ?? inv.agreedLocation,
+        subtotalMinor: patch.subtotalMinor,
+        feeMinor,
+        totalMinor: patch.subtotalMinor + feeMinor,
+      };
+      return updatedInvoice;
+    }),
+  }));
+
+  if (updatedInvoice) {
+    syncInvoiceAction(invoiceId, {
+      action: "update_booking_details",
+      title: patch.title,
+      agreedDate: patch.agreedDate,
+      agreedLocation: patch.agreedLocation,
+      subtotalMinor: patch.subtotalMinor,
+    });
+  }
+
+  return updatedInvoice;
 }
 
 export function markInvoicePaidHeld(
@@ -701,6 +1092,7 @@ export function markInvoicePaidHeld(
       };
     }),
   }));
+  syncInvoiceAction(invoiceId, { action: "pay_held", stripeSessionId, referralApplied });
 }
 
 export function markInvoiceDelivered(invoiceId: string): void {
@@ -713,6 +1105,7 @@ export function markInvoiceDelivered(invoiceId: string): void {
         : inv,
     ),
   }));
+  syncInvoiceAction(invoiceId, { action: "mark_delivered" });
 }
 
 export function reportProblemAndPausePayout(invoiceId: string, reason: string): void {
@@ -730,6 +1123,7 @@ export function reportProblemAndPausePayout(invoiceId: string, reason: string): 
         : inv,
     ),
   }));
+  syncInvoiceAction(invoiceId, { action: "report_problem", reason });
 }
 
 export function confirmSatisfactionAndRelease(invoiceId: string): void {
@@ -747,6 +1141,7 @@ export function confirmSatisfactionAndRelease(invoiceId: string): void {
         : inv,
     ),
   }));
+  syncInvoiceAction(invoiceId, { action: "confirm_release" });
 }
 
 export function submitVerifiedReview(input: {
@@ -771,6 +1166,17 @@ export function submitVerifiedReview(input: {
     ...prev,
     reviews: [review, ...prev.reviews.filter((r) => r.invoiceId !== input.invoiceId)],
   }));
+  if (typeof window !== "undefined") {
+    void fetch("/api/v1/marketplace/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        invoiceId: input.invoiceId,
+        rating: input.rating,
+        comment: input.comment.trim(),
+      }),
+    }).then(() => syncUserMarketplaceState()).catch(() => {});
+  }
   return review;
 }
 
@@ -840,6 +1246,7 @@ export function resolveDisputeInvoice(
       };
     }),
   }));
+  syncInvoiceAction(invoiceId, { action: "resolve_dispute", resolution });
 }
 
 export function addCommunityPost(input: {
@@ -956,13 +1363,29 @@ export function useDemoFlow() {
   const raw = React.useSyncExternalStore(subscribe, readRaw, getServerSnapshot);
   const state = React.useMemo(() => parseState(raw), [raw]);
 
+  React.useEffect(() => {
+    void syncPublicListings();
+    void syncUserMarketplaceState();
+    const id = window.setInterval(() => {
+      void syncPublicListings();
+      void syncUserMarketplaceState();
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, []);
+
   return {
     ...state,
+    publishLiveListing,
+    syncPublicListings,
+    syncUserMarketplaceState,
     addServiceListing,
     addProductListing,
     startOrGetConversation,
     sendMessage,
+    deleteConversation,
+    retractInvoice,
     createInvoiceAndSend,
+    updateServiceOfferBookingDetails,
     markInvoicePaidHeld,
     markInvoiceDelivered,
     reportProblemAndPausePayout,

@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import {
   Check,
   Copy,
   Gift,
   Heart,
+  Lock,
   MessageCircle,
   Send,
   ShieldCheck,
@@ -40,6 +43,12 @@ const POPULAR_TOPICS = [
 ] as const;
 
 export function CommunityFeedClient() {
+  const { isSignedIn, user } = useUser();
+  const memberName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Servyn Member";
   const { communityPosts } = useDemoFlow();
   const [selectedTag, setSelectedTag] = React.useState<string>("#braids");
   const [filterTag, setFilterTag] = React.useState<string | null>(null);
@@ -59,9 +68,9 @@ export function CommunityFeedClient() {
 
   function handlePublishPost(e: React.FormEvent) {
     e.preventDefault();
-    if (!postBody.trim()) return;
+    if (!isSignedIn || !postBody.trim()) return;
     addCommunityPost({
-      authorName: "Adaeze N.",
+      authorName: memberName,
       authorArea: postArea,
       tag: selectedTag,
       body: postBody,
@@ -71,8 +80,8 @@ export function CommunityFeedClient() {
 
   function handleCommentSubmit(e: React.FormEvent, postId: string) {
     e.preventDefault();
-    if (!commentDraft.trim()) return;
-    addPostComment(postId, "Adaeze N.", commentDraft);
+    if (!isSignedIn || !commentDraft.trim()) return;
+    addPostComment(postId, memberName, commentDraft);
     setCommentDraft("");
   }
 
@@ -107,57 +116,89 @@ export function CommunityFeedClient() {
       <section className="mx-auto grid max-w-[1140px] gap-6 px-6 py-8 lg:grid-cols-[1fr_320px] lg:px-8">
         {/* Main feed */}
         <div className="space-y-5">
-          {/* Post composer */}
-          <form
-            onSubmit={handlePublishPost}
-            className="rounded-[18px] border border-line bg-surface p-5 shadow-soft"
-          >
-            <textarea
-              rows={3}
-              value={postBody}
-              onChange={(e) => setPostBody(e.target.value)}
-              placeholder="Share a tip, ask for a Manchester recommendation, or celebrate a great booking..."
-              className="w-full rounded-lg border-[1.5px] border-line-2 bg-surface-2 p-3 text-sm text-ink placeholder:text-mut focus:border-gold-500 focus:bg-surface focus:outline-none"
-            />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                {COMPOSER_TAGS.map((item) => (
-                  <button
-                    key={item.tag}
-                    type="button"
-                    onClick={() => setSelectedTag(item.tag)}
-                    className={cn(
-                      "cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                      selectedTag === item.tag
-                        ? "bg-leaf-900 text-gold-300"
-                        : "border border-line-2 bg-surface-2 text-ink-2 hover:border-gold-400",
-                    )}
+          {/* Post composer (requires sign-in) */}
+          {isSignedIn ? (
+            <form
+              onSubmit={handlePublishPost}
+              className="rounded-[18px] border border-line bg-surface p-5 shadow-soft"
+            >
+              <textarea
+                rows={3}
+                value={postBody}
+                onChange={(e) => setPostBody(e.target.value)}
+                placeholder={`Posting as ${memberName} — share a tip or Manchester recommendation...`}
+                className="w-full rounded-lg border-[1.5px] border-line-2 bg-surface-2 p-3 text-sm text-ink placeholder:text-mut focus:border-gold-500 focus:bg-surface focus:outline-none"
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {COMPOSER_TAGS.map((item) => (
+                    <button
+                      key={item.tag}
+                      type="button"
+                      onClick={() => setSelectedTag(item.tag)}
+                      className={cn(
+                        "cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                        selectedTag === item.tag
+                          ? "bg-leaf-900 text-gold-300"
+                          : "border border-line-2 bg-surface-2 text-ink-2 hover:border-gold-400",
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <select
+                    value={postArea}
+                    onChange={(e) => setPostArea(e.target.value)}
+                    aria-label="Your Manchester area"
+                    className="rounded-full border border-line-2 bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-2 focus:border-gold-500 focus:outline-none"
                   >
-                    {item.label}
-                  </button>
-                ))}
-                <select
-                  value={postArea}
-                  onChange={(e) => setPostArea(e.target.value)}
-                  aria-label="Your Manchester area"
-                  className="rounded-full border border-line-2 bg-surface-2 px-2.5 py-1 text-xs font-medium text-ink-2 focus:border-gold-500 focus:outline-none"
+                    <option value="Hulme">Hulme</option>
+                    <option value="Salford">Salford</option>
+                    <option value="Moss Side">Moss Side</option>
+                    <option value="Cheetham Hill">Cheetham Hill</option>
+                    <option value="Chorlton">Chorlton</option>
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-leaf-800 px-5 py-2 text-xs font-semibold text-cream hover:bg-leaf-700"
                 >
-                  <option value="Hulme">Hulme</option>
-                  <option value="Salford">Salford</option>
-                  <option value="Moss Side">Moss Side</option>
-                  <option value="Cheetham Hill">Cheetham Hill</option>
-                  <option value="Chorlton">Chorlton</option>
-                </select>
+                  <Send className="size-3.5" aria-hidden="true" />
+                  <span>Post</span>
+                </button>
               </div>
-              <button
-                type="submit"
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-leaf-800 px-5 py-2 text-xs font-semibold text-cream hover:bg-leaf-700"
-              >
-                <Send className="size-3.5" aria-hidden="true" />
-                <span>Post</span>
-              </button>
+            </form>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-line bg-surface p-5 shadow-soft">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-mint text-mint-d">
+                  <Lock className="size-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <h2 className="font-serif text-base font-semibold text-ink">
+                    Sign in to join the conversation
+                  </h2>
+                  <p className="text-xs text-mut">
+                    Create a free Servyn account to share recommendations, ask questions, or reply.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/sign-in?redirect_url=/community"
+                  className="rounded-full border border-line-2 bg-surface-2 px-4 py-2 text-xs font-semibold text-ink hover:border-gold-400"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/sign-up?redirect_url=/community"
+                  className="rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2 text-xs font-semibold text-gold-ink shadow-gold"
+                >
+                  Join Servyn
+                </Link>
+              </div>
             </div>
-          </form>
+          )}
 
           {filterTag ? (
             <div className="flex items-center justify-between rounded-lg border border-gold-300 bg-gold-50 px-4 py-2 text-xs">
@@ -242,24 +283,36 @@ export function CommunityFeedClient() {
                           <span className="text-ink-2">{cmt.text}</span>
                         </div>
                       ))}
-                      <form
-                        onSubmit={(e) => handleCommentSubmit(e, post.id)}
-                        className="flex gap-2 pt-1"
-                      >
-                        <input
-                          type="text"
-                          value={commentDraft}
-                          onChange={(e) => setCommentDraft(e.target.value)}
-                          placeholder="Write a helpful reply..."
-                          className="flex-1 rounded-full border border-line-2 bg-surface px-3 py-1.5 text-xs text-ink focus:border-gold-500 focus:outline-none"
-                        />
-                        <button
-                          type="submit"
-                          className="cursor-pointer rounded-full bg-leaf-800 px-3.5 py-1.5 text-xs font-semibold text-cream hover:bg-leaf-700"
+                      {isSignedIn ? (
+                        <form
+                          onSubmit={(e) => handleCommentSubmit(e, post.id)}
+                          className="flex gap-2 pt-1"
                         >
-                          Reply
-                        </button>
-                      </form>
+                          <input
+                            type="text"
+                            value={commentDraft}
+                            onChange={(e) => setCommentDraft(e.target.value)}
+                            placeholder="Write a helpful reply..."
+                            className="flex-1 rounded-full border border-line-2 bg-surface px-3 py-1.5 text-xs text-ink focus:border-gold-500 focus:outline-none"
+                          />
+                          <button
+                            type="submit"
+                            className="cursor-pointer rounded-full bg-leaf-800 px-3.5 py-1.5 text-xs font-semibold text-cream hover:bg-leaf-700"
+                          >
+                            Reply
+                          </button>
+                        </form>
+                      ) : (
+                        <p className="pt-1 text-xs text-mut">
+                          <Link
+                            href="/sign-in?redirect_url=/community"
+                            className="font-semibold text-leaf-700 hover:underline"
+                          >
+                            Sign in
+                          </Link>{" "}
+                          to reply to this thread.
+                        </p>
+                      )}
                     </div>
                   ) : null}
                 </article>

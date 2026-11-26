@@ -97,18 +97,43 @@ const AVAILABILITY_PATTERNS: ReadonlyArray<ReadonlyArray<number>> = [
   [1, 3, 2, 4, 0, 5, 4, 3, 2, 0],
 ];
 
-const CALENDAR_DAYS = [
-  { id: "nov-20", weekday: "FRI", dayNum: 20, monthLabel: "Nov" },
-  { id: "nov-21", weekday: "SAT", dayNum: 21, monthLabel: "Nov" },
-  { id: "nov-22", weekday: "SUN", dayNum: 22, monthLabel: "Nov" },
-  { id: "nov-23", weekday: "MON", dayNum: 23, monthLabel: "Nov" },
-  { id: "nov-24", weekday: "TUE", dayNum: 24, monthLabel: "Nov" },
-  { id: "nov-25", weekday: "WED", dayNum: 25, monthLabel: "Nov" },
-  { id: "nov-26", weekday: "THU", dayNum: 26, monthLabel: "Nov" },
-  { id: "nov-27", weekday: "FRI", dayNum: 27, monthLabel: "Nov" },
-  { id: "nov-28", weekday: "SAT", dayNum: 28, monthLabel: "Nov" },
-  { id: "nov-29", weekday: "SUN", dayNum: 29, monthLabel: "Nov" },
-] as const;
+function buildUpcomingCalendarDays(count = 10): ReadonlyArray<{
+  id: string;
+  weekday: string;
+  dayNum: number;
+  monthLabel: string;
+}> {
+  const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ] as const;
+  const now = new Date();
+  return Array.from({ length: count }, (_, offset) => {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return {
+      id: `${yyyy}-${mm}-${dd}`,
+      weekday: weekdays[d.getDay()] ?? "MON",
+      dayNum: d.getDate(),
+      monthLabel: months[d.getMonth()] ?? "Jan",
+    };
+  });
+}
+
+const CALENDAR_DAYS = buildUpcomingCalendarDays(10);
 
 function buildAvailability(
   patternIndex: number,
@@ -163,6 +188,11 @@ function makeBreakdown(total: number): RatingBreakdown {
 
 export interface ServiceProvider {
   id: string;
+  ownerUserId?: string;
+  photos?: ReadonlyArray<string>;
+  address?: string;
+  lat?: number;
+  lng?: number;
   initials: string;
   name: string;
   categorySlug: ServiceCategorySlug;

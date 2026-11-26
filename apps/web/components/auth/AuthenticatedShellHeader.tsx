@@ -55,7 +55,13 @@ export function AuthenticatedShellHeader({ roles, activeRole }: AuthenticatedShe
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/list"
+            className="shrink-0 whitespace-nowrap rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3 py-1.5 text-xs font-bold text-gold-ink shadow-gold hover:brightness-105"
+          >
+            + List
+          </Link>
           <RoleSwitcher roles={roles} activeRole={activeRole} />
           <UserButton appearance={servynClerkAppearance} />
         </div>

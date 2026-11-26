@@ -4,6 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,6 +16,7 @@ import {
   MessageSquare,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
   Star,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -24,9 +26,12 @@ import {
   useRevealMotion,
 } from "@/components/ui/motion";
 import { StripeCheckoutDialog } from "@/components/demo/StripeCheckoutDialog";
+import { LeafletServiceMap } from "@/components/services/LeafletServiceMap";
 import {
   createInvoiceAndSend,
   startOrGetConversation,
+  updateServiceOfferBookingDetails,
+  useDemoFlow,
   type DemoInvoice,
 } from "@/lib/demo-flow-store";
 import type { ServiceProvider } from "@/lib/data/services";
@@ -38,12 +43,106 @@ function formatGBP(amount: number): string {
   return `£${amount.toFixed(2)}`;
 }
 
+function getDiscountedOfferingPrice(
+  offering: ServiceProvider["offerings"][number],
+  offer: DemoInvoice | null,
+  totalOfferingsCount: number,
+): {
+  originalPrice: number;
+  effectivePrice: number;
+  hasDiscount: boolean;
+  savings: number;
+} {
+  if (!offer) {
+    return {
+      originalPrice: offering.price,
+      effectivePrice: offering.price,
+      hasDiscount: false,
+      savings: 0,
+    };
+  }
+
+  if (
+    offering.name.toLowerCase() === offer.title.toLowerCase() ||
+    totalOfferingsCount === 1
+  ) {
+    const offerPrice = Math.round(offer.subtotalMinor) / 100;
+    if (offerPrice < offering.price) {
+      return {
+        originalPrice: offering.price,
+        effectivePrice: offerPrice,
+        hasDiscount: true,
+        savings: Math.round((offering.price - offerPrice) * 100) / 100,
+      };
+    }
+  } else if (
+    offer.originalAmountMinor &&
+    offer.originalAmountMinor > offer.subtotalMinor
+  ) {
+    const ratio = offer.subtotalMinor / offer.originalAmountMinor;
+    const discounted = Math.max(1, Math.round(offering.price * ratio * 100) / 100);
+    if (discounted < offering.price) {
+      return {
+        originalPrice: offering.price,
+        effectivePrice: discounted,
+        hasDiscount: true,
+        savings: Math.round((offering.price - discounted) * 100) / 100,
+      };
+    }
+  }
+
+  return {
+    originalPrice: offering.price,
+    effectivePrice: offering.price,
+    hasDiscount: false,
+    savings: 0,
+  };
+}
+
 export function ServiceProviderDetail({
   provider,
 }: {
   provider: ServiceProvider;
 }) {
   const router = useRouter();
+  const { user } = useUser();
+  const { currentUserId, conversations, invoices } = useDemoFlow();
+  const isOwner = Boolean(
+    currentUserId && provider.ownerUserId && currentUserId === provider.ownerUserId,
+  );
+  const offerIdParam = React.useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("offer"),
+    () => null,
+  );
+
+  const activeServiceOffer = React.useMemo<DemoInvoice | null>(() => {
+    if (isOwner) return null;
+    const eligible = invoices.filter((inv) => {
+      if (inv.kind !== "service" || inv.status !== "sent") return false;
+      const conv = conversations.find((c) => c.id === inv.conversationId);
+      const matchesProvider =
+        conv?.providerSlug === provider.id ||
+        Boolean(provider.ownerUserId && inv.providerUserId === provider.ownerUserId) ||
+        inv.providerName.toLowerCase() === provider.name.toLowerCase();
+      if (!matchesProvider) return false;
+      if (currentUserId && inv.customerUserId && inv.customerUserId !== currentUserId) {
+        return false;
+      }
+      return true;
+    });
+    if (eligible.length === 0) return null;
+    if (offerIdParam) {
+      const matched = eligible.find((inv) => inv.id === offerIdParam);
+      if (matched) return matched;
+    }
+    return eligible[0] ?? null;
+  }, [isOwner, invoices, conversations, provider.id, provider.ownerUserId, provider.name, currentUserId, offerIdParam]);
+  const currentUserName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Customer";
   const reduce = useReducedMotion();
   const headerReveal = useRevealMotion();
   const defaultDayId =
@@ -74,11 +173,18 @@ export function ServiceProviderDetail({
     provider.availability.find((day) => day.id === selectedDayId) ??
     provider.availability[0];
 
-  const bookingFee = selectedOffering
-    ? Math.round(selectedOffering.price * 0.1 * 100) / 100
+  const selectedPricing = selectedOffering
+    ? getDiscountedOfferingPrice(
+        selectedOffering,
+        activeServiceOffer,
+        provider.offerings.length,
+      )
+    : null;
+  const bookingFee = selectedPricing
+    ? Math.round(selectedPricing.effectivePrice * 0.1 * 100) / 100
     : 0;
-  const totalAmount = selectedOffering
-    ? selectedOffering.price + bookingFee
+  const totalAmount = selectedPricing
+    ? selectedPricing.effectivePrice + bookingFee
     : 0;
 
   const maxBreakdownCount = Math.max(
@@ -112,23 +218,42 @@ export function ServiceProviderDetail({
       return;
     }
     setBookingHint(null);
+    const dateLabel = activeDay
+      ? `${activeDay.weekday} ${activeDay.dayNum} ${activeDay.monthLabel} · ${selectedTime}`
+      : selectedTime;
+    const effectivePrice = selectedPricing?.effectivePrice ?? selectedOffering.price;
+    const subtotalMinor = Math.round(effectivePrice * 100);
+
+    if (activeServiceOffer) {
+      const updated = updateServiceOfferBookingDetails(activeServiceOffer.id, {
+        title: selectedOffering.name,
+        agreedDate: dateLabel,
+        agreedLocation: `${provider.area}, Manchester`,
+        subtotalMinor,
+      });
+      if (updated) {
+        setCheckoutInvoice(updated);
+        setCheckoutOpen(true);
+        return;
+      }
+    }
+
     const conv = startOrGetConversation({
       kind: "service",
       providerName: provider.name,
       providerSlug: provider.id,
+      providerUserId: provider.ownerUserId,
       listingTitle: selectedOffering.name,
       area: provider.area,
+      customerName: currentUserName,
     });
-    const dateLabel = activeDay
-      ? `${activeDay.weekday} ${activeDay.dayNum} ${activeDay.monthLabel} · ${selectedTime}`
-      : selectedTime;
     const inv = createInvoiceAndSend({
       conversationId: conv.id,
       kind: "service",
       providerName: provider.name,
-      customerName: "Adaeze N.",
+      customerName: currentUserName,
       title: selectedOffering.name,
-      subtotalMinor: Math.round(selectedOffering.price * 100),
+      subtotalMinor,
       agreedDate: dateLabel,
       agreedLocation: `${provider.area}, Manchester`,
       messageText: `Direct booking created for ${selectedOffering.name} (${dateLabel} in ${provider.area}).`,
@@ -144,8 +269,10 @@ export function ServiceProviderDetail({
       kind: "service",
       providerName: provider.name,
       providerSlug: provider.id,
+      providerUserId: provider.ownerUserId,
       listingTitle: selectedOffering?.name ?? provider.offerings[0]?.name ?? provider.tagline,
       area: provider.area,
+      customerName: currentUserName,
       initialMessage: messageText,
     });
     setMessageSent(true);
@@ -303,23 +430,32 @@ export function ServiceProviderDetail({
               </HeartPulse>
             </motion.button>
 
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.96 }}
-              aria-expanded={messageOpen}
-              onClick={() => {
-                setMessageOpen((prev) => !prev);
-                setMessageSent(false);
-              }}
-              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-2 bg-surface px-4 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:border-leaf-700 hover:bg-surface-2"
-            >
-              <MessageSquare
-                className="size-4 text-leaf-700"
-                strokeWidth={1.85}
-                aria-hidden="true"
-              />
-              <span>Message</span>
-            </motion.button>
+            {isOwner ? (
+              <Link
+                href="/messages"
+                className="inline-flex items-center gap-2 rounded-full border border-leaf-200 bg-mint/40 px-4 py-2 text-xs font-semibold text-mint-d"
+              >
+                <span>Your listing · View customer enquiries</span>
+              </Link>
+            ) : (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                aria-expanded={messageOpen}
+                onClick={() => {
+                  setMessageOpen((prev) => !prev);
+                  setMessageSent(false);
+                }}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line-2 bg-surface px-4 py-2 text-[13.5px] font-semibold text-ink transition-colors hover:border-leaf-700 hover:bg-surface-2"
+              >
+                <MessageSquare
+                  className="size-4 text-leaf-700"
+                  strokeWidth={1.85}
+                  aria-hidden="true"
+                />
+                <span>Message</span>
+              </motion.button>
+            )}
           </div>
         </div>
 
@@ -397,6 +533,24 @@ export function ServiceProviderDetail({
             >
               About
             </h2>
+            {provider.photos && provider.photos.length > 0 ? (
+              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {provider.photos.map((src, idx) => (
+                  <div
+                    key={`${idx}-${src.slice(0, 20)}`}
+                    className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line"
+                  >
+                    <Image
+                      src={src}
+                      alt={`${provider.tagline} photo ${idx + 1}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <p className="mt-3 max-w-[68ch] text-[14.5px] leading-relaxed text-ink-2">
               {provider.about}
             </p>
@@ -430,6 +584,29 @@ export function ServiceProviderDetail({
             </div>
           </section>
 
+          {/* Personal Chat Discount Banner */}
+          {activeServiceOffer && !isOwner ? (
+            <div className="rounded-[18px] border border-gold-400/60 bg-gold-50 px-5 py-4 shadow-soft">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-100 px-2.5 py-0.5 text-[11px] font-bold text-gold-ink">
+                  <Sparkles className="size-3.5 text-gold-600" aria-hidden="true" />
+                  <span>Personal chat discount</span>
+                </span>
+                <Link
+                  href={`/messages?thread=${encodeURIComponent(activeServiceOffer.conversationId)}`}
+                  className="text-xs font-semibold text-leaf-800 underline underline-offset-2 hover:text-leaf-900"
+                >
+                  View in chat
+                </Link>
+              </div>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-ink-2">
+                Your agreed discount from <strong>{provider.name}</strong> (
+                {activeServiceOffer.discountNote || "Personal offer"}) is active for your account.
+                Pick your service, day, and time below to book at your discounted price.
+              </p>
+            </div>
+          ) : null}
+
           {/* Services & Prices Card */}
           <section
             id="services-menu"
@@ -446,6 +623,11 @@ export function ServiceProviderDetail({
             <div className="mt-4 flex flex-col gap-3">
               {provider.offerings.map((offering) => {
                 const isSelected = selectedOfferingId === offering.id;
+                const pricing = getDiscountedOfferingPrice(
+                  offering,
+                  activeServiceOffer,
+                  provider.offerings.length,
+                );
                 return (
                   <div
                     key={offering.id}
@@ -474,9 +656,25 @@ export function ServiceProviderDetail({
                     </div>
 
                     <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
-                      <span className="font-serif text-[17.5px] font-bold text-ink tabular-nums">
-                        {formatGBP(offering.price)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {pricing.hasDiscount ? (
+                          <>
+                            <span className="rounded-full bg-mint px-2 py-0.5 text-[10.5px] font-bold text-mint-d">
+                              Your offer
+                            </span>
+                            <span className="text-[13px] text-mut line-through tabular-nums">
+                              {formatGBP(pricing.originalPrice)}
+                            </span>
+                            <span className="font-serif text-[17.5px] font-bold text-leaf-800 tabular-nums">
+                              {formatGBP(pricing.effectivePrice)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-serif text-[17.5px] font-bold text-ink tabular-nums">
+                            {formatGBP(offering.price)}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         aria-pressed={isSelected}
@@ -654,38 +852,14 @@ export function ServiceProviderDetail({
               </span>
             </div>
 
-            <div className="relative mt-4 aspect-[16/8.2] overflow-hidden rounded-[16px] border border-line bg-cream-2">
-              <Image
-                src="/images/manchester-map-placeholder.svg"
-                alt={`Approximate service area map for ${provider.area}, Manchester`}
-                fill
-                unoptimized
-                className="object-cover"
+            <div className="mt-4 overflow-hidden rounded-[16px]">
+              <LeafletServiceMap
+                providerName={provider.name}
+                area={provider.area}
+                address={provider.address}
+                lat={provider.lat}
+                lng={provider.lng}
               />
-
-              {/* Highlighted coverage circle + pin */}
-              <div
-                style={{
-                  left: `${provider.mapPinPosition.xPercent}%`,
-                  top: `${provider.mapPinPosition.yPercent}%`,
-                }}
-                className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-              >
-                <span className="flex size-28 items-center justify-center rounded-full border-2 border-leaf-700/45 bg-leaf-600/15">
-                  <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border-2 border-surface bg-leaf-900 px-3 py-1 text-[12px] font-bold text-cream shadow-lift">
-                    <MapPin
-                      className="size-3.5 shrink-0 text-gold-400"
-                      strokeWidth={2}
-                      aria-hidden="true"
-                    />
-                    <span>{provider.area}</span>
-                  </span>
-                </span>
-              </div>
-
-              <span className="absolute bottom-3 left-3 rounded-full border border-line bg-surface/92 px-3 py-1 text-[11.5px] font-medium text-ink-2 shadow-xs backdrop-blur-xs">
-                Map preview · Interactive maps coming soon
-              </span>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[13px]">
@@ -696,11 +870,15 @@ export function ServiceProviderDetail({
                   aria-hidden="true"
                 />
                 <span>
-                  {provider.area}, Manchester · {provider.serviceRadiusLabel}
+                  {provider.address
+                    ? provider.address
+                    : `${provider.area}, Manchester · ${provider.serviceRadiusLabel}`}
                 </span>
               </p>
               <p className="text-[12px] text-mut">
-                Exact address shared after booking confirmation
+                {provider.address
+                  ? "Pinned location provided by vendor"
+                  : "Exact address shared after booking confirmation"}
               </p>
             </div>
           </section>
@@ -944,12 +1122,31 @@ export function ServiceProviderDetail({
                 </button>
               </div>
 
-              {selectedOffering && (
+              {selectedOffering && selectedPricing && (
                 <div className="mt-4 flex flex-col gap-1.5 border-t border-cream-line pt-3.5 text-[13px] tabular-nums">
-                  <div className="flex items-center justify-between text-cream-75">
-                    <span>Service price</span>
-                    <span>{formatGBP(selectedOffering.price)}</span>
-                  </div>
+                  {selectedPricing.hasDiscount ? (
+                    <>
+                      <div className="flex items-center justify-between text-cream-60">
+                        <span>Original price</span>
+                        <span className="line-through">
+                          {formatGBP(selectedPricing.originalPrice)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between font-semibold text-gold-300">
+                        <span>Personal chat discount</span>
+                        <span>-{formatGBP(selectedPricing.savings)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-cream-75">
+                        <span>Discounted price</span>
+                        <span>{formatGBP(selectedPricing.effectivePrice)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-between text-cream-75">
+                      <span>Service price</span>
+                      <span>{formatGBP(selectedOffering.price)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-cream-75">
                     <span>Protected fee (10%)</span>
                     <span>{formatGBP(bookingFee)}</span>
@@ -971,24 +1168,33 @@ export function ServiceProviderDetail({
                 </p>
               )}
 
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.97 }}
-                onClick={handleBookAndPay}
-                className={cn(
-                  "mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[14.5px] font-bold transition-[filter,background-color]",
-                  selectedOffering && selectedTime
-                    ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 text-gold-ink shadow-gold hover:brightness-[1.03]"
-                    : "bg-gold-500/45 text-gold-ink/85 hover:bg-gold-500/60",
-                )}
-              >
-                <span>Book &amp; pay</span>
-                <ArrowRight
-                  className="size-4"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                />
-              </motion.button>
+              {isOwner ? (
+                <Link
+                  href="/messages"
+                  className="mt-5 inline-flex w-full items-center justify-center rounded-full border border-gold-400/40 bg-leaf-950/60 px-5 py-3.5 text-sm font-bold text-gold-300"
+                >
+                  Your listing · View customer enquiries
+                </Link>
+              ) : (
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleBookAndPay}
+                  className={cn(
+                    "mt-5 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[14.5px] font-bold transition-[filter,background-color]",
+                    selectedOffering && selectedTime
+                      ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 text-gold-ink shadow-gold hover:brightness-[1.03]"
+                      : "bg-gold-500/45 text-gold-ink/85 hover:bg-gold-500/60",
+                  )}
+                >
+                  <span>Book &amp; pay</span>
+                  <ArrowRight
+                    className="size-4"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </motion.button>
+              )}
             </motion.div>
           )}
           </AnimatePresence>

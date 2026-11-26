@@ -49,22 +49,16 @@ export function HeaderAuthSlot() {
 
   if (!isSignedIn) {
     return (
-      <div className="flex items-center gap-2">
-        <Link
-          href="/sign-up?intent=vendor"
-          className="hidden rounded-full px-3 py-1.5 text-xs font-semibold text-cream-85 transition-colors hover:text-gold-300 lg:inline-flex"
-        >
-          Become a vendor
-        </Link>
+      <div className="flex shrink-0 items-center gap-2">
         <Link
           href="/sign-in"
-          className="rounded-full border border-gold-45 px-3.5 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-cream/10"
+          className="shrink-0 whitespace-nowrap rounded-full border border-gold-45 px-3.5 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-cream/10"
         >
           Sign in
         </Link>
         <Link
           href="/sign-up"
-          className="rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3.5 py-1.5 text-xs font-semibold text-gold-ink shadow-gold transition-all hover:brightness-105"
+          className="shrink-0 whitespace-nowrap rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3.5 py-1.5 text-xs font-semibold text-gold-ink shadow-gold transition-all hover:brightness-105"
         >
           Join
         </Link>

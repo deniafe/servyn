@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Gift, Lock, ShieldCheck } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
+import { loadStripe, type Stripe, type StripeCardElement } from "@stripe/stripe-js";
+import { Check, CheckCircle2, Copy, CreditCard, Gift, Lock, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,9 @@ import {
   type DemoInvoice,
 } from "@/lib/demo-flow-store";
 
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+
 export interface StripeCheckoutDialogProps {
   invoice: DemoInvoice | null;
   open: boolean;
@@ -32,17 +37,69 @@ export function StripeCheckoutDialog({
   onOpenChange,
   onPaid,
 }: StripeCheckoutDialogProps) {
+  const { isSignedIn } = useAuth();
   const { referralCreditActive } = useDemoFlow();
-  const [applyReferral, setApplyReferral] = React.useState(true);
+  const [applyReferral, setApplyReferral] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [paidDone, setPaidDone] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [cardReady, setCardReady] = React.useState(false);
+  const [copiedCard, setCopiedCard] = React.useState(false);
+
+  const cardMountRef = React.useRef<HTMLDivElement | null>(null);
+  const stripeRef = React.useRef<Stripe | null>(null);
+  const cardRef = React.useRef<StripeCardElement | null>(null);
+
+  React.useEffect(() => {
+    if (!open || paidDone || !isSignedIn || !stripePromise) return;
+    let active = true;
+    let mountedCard: StripeCardElement | null = null;
+
+    void stripePromise.then((stripe) => {
+      if (!active || !stripe || !cardMountRef.current) return;
+      stripeRef.current = stripe;
+      const elements = stripe.elements();
+      const card = elements.create("card", {
+        hidePostalCode: false,
+        style: {
+          base: {
+            fontSize: "14px",
+            color: "#152b22",
+            fontFamily: "Inter, system-ui, sans-serif",
+            "::placeholder": { color: "#687a71" },
+          },
+          invalid: {
+            color: "#9d2b2b",
+          },
+        },
+      });
+      card.mount(cardMountRef.current);
+      card.on("ready", () => {
+        if (active) setCardReady(true);
+      });
+      card.on("change", (ev) => {
+        if (active) setError(ev.error ? ev.error.message : null);
+      });
+      mountedCard = card;
+      cardRef.current = card;
+    });
+
+    return () => {
+      active = false;
+      setCardReady(false);
+      if (mountedCard) {
+        mountedCard.destroy();
+      }
+      cardRef.current = null;
+    };
+  }, [open, paidDone, isSignedIn]);
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setPaidDone(false);
       setError(null);
       setLoading(false);
+      setApplyReferral(false);
     }
     onOpenChange(nextOpen);
   }
@@ -59,6 +116,18 @@ export function StripeCheckoutDialog({
     setError(null);
 
     try {
+      if (stripeRef.current && cardRef.current) {
+        const { error: pmError } = await stripeRef.current.createPaymentMethod({
+          type: "card",
+          card: cardRef.current,
+        });
+        if (pmError) {
+          setError(pmError.message ?? "Please check your card details.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const res = await fetch("/api/demo/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,22 +176,48 @@ export function StripeCheckoutDialog({
       <DialogContent className="max-w-md border-line bg-surface">
         <DialogHeader>
           <DialogTitle className="font-serif text-xl text-ink">
-            {paidDone ? "Payment held securely by Servyn" : "Stripe Protected Checkout"}
+            {paidDone ? "Payment protected by Servyn" : "Stripe Protected Checkout"}
           </DialogTitle>
           <DialogDescription className="text-xs text-mut">
             {paidDone
-              ? "Your payment succeeded. Funds stay protected within Servyn until you confirm satisfaction."
-              : "Powered by Stripe. Your payment is held within Servyn until you confirm the service or goods are delivered."}
+              ? "Your payment succeeded. Funds stay protected until you confirm satisfactory delivery."
+              : "Processed by Stripe. Your payment stays protected until you confirm the service or goods are delivered."}
           </DialogDescription>
         </DialogHeader>
 
-        {paidDone ? (
+        {!isSignedIn ? (
+          <div className="space-y-4 py-2">
+            <div className="rounded-md border border-line bg-surface-2 p-4 text-xs text-ink-2">
+              <p className="font-semibold text-ink">Sign in required to complete payment</p>
+              <p className="mt-1 leading-relaxed text-mut">
+                Every booking and protected payment is linked to your Servyn account so you can
+                track delivery, message the provider, and request support if needed.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/sign-in"
+                onClick={() => handleOpenChange(false)}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-leaf-800 px-4 py-2.5 text-xs font-semibold text-cream hover:bg-leaf-700"
+              >
+                Sign in to pay
+              </Link>
+              <Link
+                href="/sign-up"
+                onClick={() => handleOpenChange(false)}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2.5 text-xs font-semibold text-gold-ink shadow-gold"
+              >
+                Create account
+              </Link>
+            </div>
+          </div>
+        ) : paidDone ? (
           <div className="space-y-4 py-2">
             <div className="flex items-start gap-3 rounded-md border border-leaf-200 bg-leaf-50 p-4">
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-leaf-700" aria-hidden="true" />
               <div className="space-y-1 text-xs text-ink-2">
                 <p className="font-semibold text-ink">
-                  {formatMinorGBP(effectiveTotalMinor)} paid · Held by Servyn ({invoice.refId})
+                  {formatMinorGBP(effectiveTotalMinor)} paid · Protected ({invoice.refId})
                 </p>
                 <p>
                   {invoice.providerName} has been notified. Once delivered, open your dashboard to
@@ -196,26 +291,66 @@ export function StripeCheckoutDialog({
               </div>
             </div>
 
+            {/* Real Stripe.js CardElement */}
             <div className="space-y-2 rounded-md border border-line bg-surface p-3.5 text-xs">
               <div className="flex items-center justify-between text-ink-2">
                 <span className="inline-flex items-center gap-1.5 font-semibold">
                   <CreditCard className="size-4 text-leaf-700" aria-hidden="true" />
-                  Stripe Card (Test Mode)
+                  <span>Card details</span>
                 </span>
-                <span className="rounded bg-surface-2 px-2 py-0.5 text-[10.5px] font-semibold text-mut">
-                  VISA •••• 4242
-                </span>
+                <span className="text-[10.5px] font-semibold text-mut">Secured by Stripe</span>
               </div>
-              <p className="text-[11.5px] text-mut">
-                Card details are handled by Stripe — Servyn never stores card numbers.
+              {stripePromise ? (
+                <div
+                  ref={cardMountRef}
+                  className="min-h-[38px] rounded-md border border-line-2 bg-surface-2 px-3 py-2.5"
+                />
+              ) : (
+                <p className="text-[11.5px] text-blush-d">
+                  Stripe publishable key is not configured.
+                </p>
+              )}
+              {stripePublishableKey.startsWith("pk_test_") ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3 py-2 text-[11px] text-ink-2">
+                  <div>
+                    <span className="font-semibold text-leaf-700">Stripe Test Card: </span>
+                    <span className="font-mono font-semibold">4242 4242 4242 4242</span>
+                    <span className="text-mut"> · Exp 12/30 · CVC 123 · M15 5RN</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText("4242424242424242").catch(() => {});
+                      setCopiedCard(true);
+                      window.setTimeout(() => setCopiedCard(false), 1800);
+                    }}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-line-2 bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold text-ink hover:border-gold-400"
+                  >
+                    {copiedCard ? (
+                      <>
+                        <Check className="size-3 text-leaf-700" aria-hidden="true" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3" aria-hidden="true" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : null}
+              <p className="text-[11px] text-mut">
+                Card details go directly into Stripe&apos;s secure fields — Servyn never sees or
+                stores card numbers.
               </p>
             </div>
 
             <div className="flex items-start gap-2 rounded-md border border-gold-300 bg-gold-50 p-3 text-[11.5px] text-ink-2">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden="true" />
               <span>
-                <strong>Protected payment (not escrow):</strong> Held within Servyn until you
-                confirm the service or goods arrived satisfactorily.
+                <strong>Protected payment (not escrow):</strong> Processed by Stripe and held until
+                you confirm satisfactory delivery (or 48h after completion).
               </span>
             </div>
 
@@ -235,7 +370,7 @@ export function StripeCheckoutDialog({
               </button>
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || (Boolean(stripePromise) && !cardReady)}
                 onClick={() => void handlePay()}
                 className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-6 py-2.5 text-sm font-semibold text-gold-ink shadow-gold transition-all hover:brightness-105 disabled:opacity-60"
               >

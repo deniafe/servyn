@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { AuthenticatedShellHeader } from "@/components/auth/AuthenticatedShellHeader";
+import { DashboardShellSkeleton } from "@/components/auth/DashboardShellSkeleton";
 import { requireRole } from "@/lib/auth";
 
 async function AdminGate({ children }: { children: ReactNode }) {
@@ -49,7 +50,7 @@ async function AdminGate({ children }: { children: ReactNode }) {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-cream" />}>
+    <Suspense fallback={<DashboardShellSkeleton />}>
       <AdminGate>{children}</AdminGate>
     </Suspense>
   );

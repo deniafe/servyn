@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import {
   ArrowRight,
   MapPin,
@@ -71,6 +72,12 @@ function parseBudgetMinor(query: string): number | null {
 
 export function AiMatchClient() {
   const router = useRouter();
+  const { user } = useUser();
+  const currentUserName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "Customer";
   const { customServices } = useDemoFlow();
   const [query, setQuery] = React.useState("");
   const [submittedQuery, setSubmittedQuery] = React.useState("");
@@ -184,6 +191,7 @@ export function AiMatchClient() {
       providerSlug: candidate.slug,
       listingTitle: candidate.tagline,
       area: candidate.area,
+      customerName: currentUserName,
       initialMessage: submittedQuery
         ? `Hi ${candidate.providerName}! AI Match recommended you for: "${submittedQuery}". Could we agree a date, location, and price?`
         : `Hi ${candidate.providerName}! Could we agree a date and price for ${candidate.tagline}?`,

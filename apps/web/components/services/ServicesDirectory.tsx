@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   Baby,
@@ -102,7 +103,12 @@ export function ServicesDirectory({
         .map((w) => w[0]?.toUpperCase() ?? "")
         .join("") || "SV";
       return {
-        id: svc.id,
+        id: svc.slug,
+        ownerUserId: svc.ownerUserId,
+        photos: svc.photos,
+        address: svc.address,
+        lat: svc.lat,
+        lng: svc.lng,
         initials,
         name: svc.providerName,
         categorySlug: catMeta.slug,
@@ -163,7 +169,8 @@ export function ServicesDirectory({
         ],
       };
     });
-    return [...mapped, ...providers];
+    const mappedIds = new Set(mapped.map((m) => m.id));
+    return [...mapped, ...providers.filter((p) => !mappedIds.has(p.id))];
   }, [customServices, providers, categories]);
 
   const [query, setQuery] = React.useState(initialQuery);
@@ -329,7 +336,7 @@ export function ServicesDirectory({
   );
 
   const filteredProviders = filterByQuery(
-    providers.filter((p) => matchesNonQueryFilters(p, false)),
+    allProviders.filter((p) => matchesNonQueryFilters(p, false)),
   ).sort((a, b) => {
     if (sortBy === "rating") return b.rating - a.rating || b.reviews - a.reviews;
     if (sortBy === "price-asc") return a.startingPrice - b.startingPrice;
@@ -435,6 +442,14 @@ export function ServicesDirectory({
                 Manchester — transparent starting prices and protected payment
                 on every booking.
               </p>
+              <div className="mt-4">
+                <Link
+                  href="/list?kind=service"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2 text-xs font-bold text-gold-ink shadow-gold hover:brightness-105"
+                >
+                  <span>+ List a service</span>
+                </Link>
+              </div>
             </motion.div>
 
             <div className="flex flex-col gap-3">
@@ -1165,16 +1180,30 @@ export function ServicesDirectory({
                         <Link
                           href={`/services/${provider.id}`}
                           aria-label={`View ${provider.name}`}
-                          className="block size-full"
-                          style={{
-                            backgroundImage: `var(--sv-diamond-pattern), ${provider.bannerVar}`,
-                          }}
+                          className="relative block size-full"
+                          style={
+                            provider.photos && provider.photos.length > 0
+                              ? undefined
+                              : {
+                                  backgroundImage: `var(--sv-diamond-pattern), ${provider.bannerVar}`,
+                                }
+                          }
                         >
-                          <Watermark
-                            className="pointer-events-none absolute -right-2 -bottom-2 size-20 text-cream/12"
-                            strokeWidth={1.25}
-                            aria-hidden="true"
-                          />
+                          {provider.photos && provider.photos.length > 0 ? (
+                            <Image
+                              src={provider.photos[0]!}
+                              alt={provider.tagline}
+                              fill
+                              unoptimized
+                              className="object-cover"
+                            />
+                          ) : (
+                            <Watermark
+                              className="pointer-events-none absolute -right-2 -bottom-2 size-20 text-cream/12"
+                              strokeWidth={1.25}
+                              aria-hidden="true"
+                            />
+                          )}
 
                           {provider.enhancedChecks && (
                             <span className="absolute top-3 left-3 z-[2] inline-flex items-center gap-1 rounded-full border border-gold-400/30 bg-leaf-950/70 px-2.5 py-0.5 text-[10.5px] font-semibold text-cream">

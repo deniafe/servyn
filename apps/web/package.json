@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.10.7",
+    "@opentelemetry/core": "^3.1.1",
     "@sentry/nextjs": "^10.11.0",
     "@servyn/core": "workspace:*",
     "@servyn/db": "workspace:*",
@@ -20,10 +21,12 @@
     "@servyn/observability": "workspace:*",
     "@servyn/shared": "workspace:*",
     "@servyn/ui": "workspace:*",
+    "@stripe/stripe-js": "^10.4.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "inngest": "^3.44.5",
     "jspdf": "^3.0.1",
+    "leaflet": "^1.9.4",
     "lucide-react": "^1.75.0",
     "motion": "^14.14.0",
     "next": "16.4.6",
@@ -40,6 +43,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
+    "@types/leaflet": "^1.9.23",
     "@types/node": "^22.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",

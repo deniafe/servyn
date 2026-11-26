@@ -27,7 +27,6 @@ const FOOTER_COLUMNS: ReadonlyArray<FooterColumn> = [
       { label: "Vendor pricing", href: "/pricing" },
       { label: "Become a vendor", href: "/sign-up?intent=vendor" },
       { label: "Sell on the market", href: "/market?mode=bulk" },
-      { label: "Admin console demo", href: "/admin-demo" },
     ],
   },
   {
@@ -98,8 +97,7 @@ export function SiteFooter() {
       <div className="border-t border-cream-line">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 px-6 py-5 text-[12px] text-cream-60 lg:px-8">
           <p>
-            © 2026 Servyn Ltd · Demo build · Payments designed for Stripe
-            Connect
+            © 2026 Servyn · Manchester, UK · Payments powered by Stripe
           </p>
           <div
             aria-hidden="true"
