@@ -12,6 +12,7 @@ import {
   or,
 } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
+import { canAutoReleaseAt48h } from "@/lib/payout-rules";
 
 export async function GET(): Promise<NextResponse> {
   const current = await getCurrentIdentity();
@@ -91,6 +92,30 @@ export async function GET(): Promise<NextResponse> {
         })),
     }));
 
+    const now = new Date();
+    for (const inv of invRows) {
+      if (
+        canAutoReleaseAt48h(
+          {
+            status: inv.status,
+            disputed: inv.disputed,
+            customerConfirmedAt: inv.customerConfirmedAt,
+            providerConfirmedAt: inv.providerConfirmedAt,
+            autoReleaseAt: inv.autoReleaseAt,
+          },
+          now,
+        )
+      ) {
+        await db
+          .update(liveInvoices)
+          .set({ status: "released", releasedAt: now, autoReleaseAt: null })
+          .where(eq(liveInvoices.id, inv.id));
+        inv.status = "released";
+        inv.releasedAt = now;
+        inv.autoReleaseAt = null;
+      }
+    }
+
     const invoices = invRows.map((i) => ({
       id: i.id,
       refId: i.refId,
@@ -110,10 +135,14 @@ export async function GET(): Promise<NextResponse> {
       feeMinor: i.feeMinor,
       totalMinor: i.totalMinor,
       status: i.status,
+      disputed: i.disputed,
       disputeReason: i.disputeReason ?? undefined,
       stripeSessionId: i.stripeSessionId ?? undefined,
       paidAt: i.paidAt?.toISOString(),
       deliveredAt: i.deliveredAt?.toISOString(),
+      customerConfirmedAt: i.customerConfirmedAt?.toISOString(),
+      providerConfirmedAt: i.providerConfirmedAt?.toISOString(),
+      autoReleaseAt: i.autoReleaseAt?.toISOString(),
       disputedAt: i.disputedAt?.toISOString(),
       releasedAt: i.releasedAt?.toISOString(),
       createdAt: i.createdAt.toISOString(),

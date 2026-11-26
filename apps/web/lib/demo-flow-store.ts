@@ -98,11 +98,15 @@ export interface DemoInvoice {
   feeMinor: number;
   totalMinor: number;
   status: DemoInvoiceStatus;
+  disputed?: boolean;
   disputeReason?: string;
   disputedAt?: string;
   stripeSessionId?: string;
   paidAt?: string;
   deliveredAt?: string;
+  customerConfirmedAt?: string;
+  providerConfirmedAt?: string;
+  autoReleaseAt?: string;
   releasedAt?: string;
   createdAt: string;
 }
@@ -1119,13 +1123,22 @@ export function markInvoicePaidHeld(
 
 export function markInvoiceDelivered(invoiceId: string): void {
   const now = new Date().toISOString();
+  const autoReleaseAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   updateState((prev) => ({
     ...prev,
-    invoices: prev.invoices.map((inv) =>
-      inv.id === invoiceId && inv.status === "paid_held"
-        ? { ...inv, status: "delivered", deliveredAt: now }
-        : inv,
-    ),
+    invoices: prev.invoices.map((inv) => {
+      if (inv.id !== invoiceId || inv.disputed || inv.status === "disputed") return inv;
+      if (inv.status !== "paid_held" && inv.status !== "delivered") return inv;
+      const bothConfirmed = Boolean(inv.customerConfirmedAt);
+      return {
+        ...inv,
+        status: bothConfirmed ? "released" : "delivered",
+        deliveredAt: inv.deliveredAt ?? now,
+        providerConfirmedAt: inv.providerConfirmedAt ?? now,
+        autoReleaseAt: bothConfirmed ? undefined : (inv.autoReleaseAt ?? autoReleaseAt),
+        releasedAt: bothConfirmed ? now : inv.releasedAt,
+      };
+    }),
   }));
   syncInvoiceAction(invoiceId, { action: "mark_delivered" });
 }
@@ -1139,6 +1152,8 @@ export function reportProblemAndPausePayout(invoiceId: string, reason: string): 
         ? {
             ...inv,
             status: "disputed",
+            disputed: true,
+            autoReleaseAt: undefined,
             disputeReason: reason.trim() || "Customer reported an issue",
             disputedAt: now,
           }
@@ -1150,18 +1165,24 @@ export function reportProblemAndPausePayout(invoiceId: string, reason: string): 
 
 export function confirmSatisfactionAndRelease(invoiceId: string): void {
   const now = new Date().toISOString();
+  const autoReleaseAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   updateState((prev) => ({
     ...prev,
-    invoices: prev.invoices.map((inv) =>
-      inv.id === invoiceId && (inv.status === "paid_held" || inv.status === "delivered")
-        ? {
-            ...inv,
-            status: "released",
-            deliveredAt: inv.deliveredAt ?? now,
-            releasedAt: now,
-          }
-        : inv,
-    ),
+    invoices: prev.invoices.map((inv) => {
+      if (inv.id !== invoiceId || inv.disputed || inv.status === "disputed") return inv;
+      if (inv.status !== "paid_held" && inv.status !== "delivered") return inv;
+      // Note: for local seed threads without DB IDs, if providerUserId is unset allow immediate release;
+      // for live threads, release straight away when provider has already confirmed, otherwise wait 48h.
+      const hasProviderConfirmed = Boolean(inv.providerConfirmedAt) || !inv.providerUserId;
+      return {
+        ...inv,
+        status: hasProviderConfirmed ? "released" : "delivered",
+        deliveredAt: inv.deliveredAt ?? now,
+        customerConfirmedAt: inv.customerConfirmedAt ?? now,
+        autoReleaseAt: hasProviderConfirmed ? undefined : (inv.autoReleaseAt ?? autoReleaseAt),
+        releasedAt: hasProviderConfirmed ? now : inv.releasedAt,
+      };
+    }),
   }));
   syncInvoiceAction(invoiceId, { action: "confirm_release" });
 }
@@ -1258,11 +1279,13 @@ export function resolveDisputeInvoice(
   updateState((prev) => ({
     ...prev,
     invoices: prev.invoices.map((inv) => {
-      if (inv.id !== invoiceId || inv.status !== "disputed") return inv;
+      if (inv.id !== invoiceId || (inv.status !== "disputed" && !inv.disputed)) return inv;
       if (resolution === "release") {
         return {
           ...inv,
           status: "released",
+          disputed: false,
+          autoReleaseAt: undefined,
           deliveredAt: inv.deliveredAt ?? now,
           releasedAt: now,
         };
@@ -1270,6 +1293,8 @@ export function resolveDisputeInvoice(
       return {
         ...inv,
         status: "refunded",
+        disputed: false,
+        autoReleaseAt: undefined,
       };
     }),
   }));

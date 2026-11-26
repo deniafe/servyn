@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, getDb, liveConversations, liveInvoices, liveMessages } from "@servyn/db";
+import { eq, getDb, liveConversations, liveInvoices, liveMessages, users } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
+import { inngest } from "@/inngest/client";
+import { evaluateConfirmation } from "@/lib/payout-rules";
+import { buildFirstConfirmationEmail, sendPayoutNotificationEmail } from "@/lib/payout-emails";
 
 const InvoiceActionSchema = z.object({
   action: z.enum([
@@ -21,6 +24,14 @@ const InvoiceActionSchema = z.object({
   agreedLocation: z.string().trim().max(120).optional(),
   subtotalMinor: z.number().int().min(100).max(10_000_000).optional(),
 });
+
+async function safeEmitInngest(name: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    await inngest.send({ name, data });
+  } catch {
+    // Ignore when INNGEST_EVENT_KEY is not configured in local dev.
+  }
+}
 
 export async function POST(
   request: Request,
@@ -87,30 +98,96 @@ export async function POST(
           paidAt: now,
         })
         .where(eq(liveInvoices.id, inv.id));
-      messageBody = `Purchase successful (${inv.refId}) — £${((inv.subtotalMinor + feeMinor) / 100).toFixed(2)} protected via Stripe.`;
-    } else if (v.action === "mark_delivered" && inv.status === "paid_held") {
-      await db
-        .update(liveInvoices)
-        .set({ status: "delivered", deliveredAt: now })
-        .where(eq(liveInvoices.id, inv.id));
-      senderRole = "provider";
-      messageBody =
-        inv.kind === "service"
-          ? `Service completed (${inv.refId}). Please confirm everything is OK to release payment.`
-          : `Order shipped / delivered (${inv.refId}). Please confirm everything is OK to release payment.`;
-    } else if (
-      v.action === "confirm_release" &&
-      (inv.status === "paid_held" || inv.status === "delivered")
-    ) {
-      await db
-        .update(liveInvoices)
-        .set({
-          status: "released",
-          deliveredAt: inv.deliveredAt ?? now,
-          releasedAt: now,
-        })
-        .where(eq(liveInvoices.id, inv.id));
-      messageBody = `Order accepted (${inv.refId}) — payment released to ${inv.providerName}.`;
+      messageBody = `Purchase successful (${inv.refId}) — £${((inv.subtotalMinor + feeMinor) / 100).toFixed(2)} held in Stripe.`;
+    } else if (v.action === "mark_delivered" || v.action === "confirm_release") {
+      const actor: "customer" | "provider" =
+        v.action === "mark_delivered" ? "provider" : "customer";
+      const decision = evaluateConfirmation(
+        {
+          status: inv.status,
+          disputed: inv.disputed,
+          customerConfirmedAt: inv.customerConfirmedAt,
+          providerConfirmedAt: inv.providerConfirmedAt,
+          autoReleaseAt: inv.autoReleaseAt,
+        },
+        actor,
+        now,
+      );
+
+      if (decision.action === "blocked_disputed") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "DISPUTED",
+              message: "This booking is disputed — nothing can be paid out until it is cleared.",
+            },
+          },
+          { status: 409 },
+        );
+      }
+
+      if (decision.action === "release_now") {
+        await db
+          .update(liveInvoices)
+          .set({
+            status: "released",
+            deliveredAt: inv.deliveredAt ?? now,
+            customerConfirmedAt: decision.customerConfirmedAt,
+            providerConfirmedAt: decision.providerConfirmedAt,
+            autoReleaseAt: null,
+            releasedAt: decision.releasedAt,
+          })
+          .where(eq(liveInvoices.id, inv.id));
+        senderRole = actor;
+        messageBody = `Both parties confirmed (${inv.refId}) — £${(inv.subtotalMinor / 100).toFixed(2)} released to ${inv.providerName} straight away.`;
+        await safeEmitInngest("invoice/released", { invoiceId: inv.id });
+      } else if (decision.action === "await_second_or_48h") {
+        await db
+          .update(liveInvoices)
+          .set({
+            status: "delivered",
+            deliveredAt: inv.deliveredAt ?? now,
+            customerConfirmedAt: decision.customerConfirmedAt,
+            providerConfirmedAt: decision.providerConfirmedAt,
+            autoReleaseAt: decision.autoReleaseAt,
+          })
+          .where(eq(liveInvoices.id, inv.id));
+        senderRole = actor;
+        messageBody =
+          actor === "provider"
+            ? `${inv.providerName} confirmed completion (${inv.refId}). Payout releases in 48 hours, or straight away once ${inv.customerName} confirms.`
+            : `${inv.customerName} confirmed completion (${inv.refId}). Payout releases in 48 hours, or straight away once ${inv.providerName} confirms.`;
+
+        const recipientUserId =
+          decision.notifyParty === "provider" ? inv.providerUserId : inv.customerUserId;
+        if (recipientUserId) {
+          const [recipient] = await db
+            .select({ email: users.email })
+            .from(users)
+            .where(eq(users.id, recipientUserId))
+            .limit(1);
+          if (recipient?.email) {
+            const emailContent = buildFirstConfirmationEmail({
+              recipientName:
+                decision.notifyParty === "provider" ? inv.providerName : inv.customerName,
+              confirmedByName: actor === "provider" ? inv.providerName : inv.customerName,
+              title: inv.title,
+              refId: inv.refId,
+              amountLabel: `£${(inv.subtotalMinor / 100).toFixed(2)}`,
+            });
+            await sendPayoutNotificationEmail({
+              to: recipient.email,
+              ...emailContent,
+            });
+          }
+        }
+
+        await safeEmitInngest("invoice/first-confirmed", {
+          invoiceId: inv.id,
+          notifyParty: decision.notifyParty,
+        });
+      }
     } else if (
       v.action === "report_problem" &&
       (inv.status === "paid_held" || inv.status === "delivered")
@@ -120,24 +197,32 @@ export async function POST(
         .update(liveInvoices)
         .set({
           status: "disputed",
+          disputed: true,
+          autoReleaseAt: null,
           disputeReason: reason,
           disputedAt: now,
         })
         .where(eq(liveInvoices.id, inv.id));
-      messageBody = `Issue reported (${inv.refId}): ${reason}. Payout paused for review.`;
-    } else if (v.action === "resolve_dispute" && inv.status === "disputed") {
+      messageBody = `Issue reported (${inv.refId}): ${reason}. Payout paused until cleared.`;
+      await safeEmitInngest("invoice/disputed", { invoiceId: inv.id });
+    } else if (v.action === "resolve_dispute" && (inv.status === "disputed" || inv.disputed)) {
       const nextStatus = v.resolution === "refund" ? "refunded" : "released";
       await db
         .update(liveInvoices)
         .set({
           status: nextStatus,
+          disputed: false,
+          autoReleaseAt: null,
           releasedAt: nextStatus === "released" ? now : inv.releasedAt,
         })
         .where(eq(liveInvoices.id, inv.id));
       messageBody =
         nextStatus === "refunded"
-          ? `Dispute resolved (${inv.refId}): refunded to customer.`
-          : `Dispute resolved (${inv.refId}): payment released to ${inv.providerName}.`;
+          ? `Dispute cleared (${inv.refId}): refunded to customer.`
+          : `Dispute cleared (${inv.refId}): payment released to ${inv.providerName}.`;
+      if (nextStatus === "released") {
+        await safeEmitInngest("invoice/released", { invoiceId: inv.id });
+      }
     } else if (v.action === "update_booking_details" && inv.status === "sent") {
       const nextSubtotal = v.subtotalMinor ?? inv.subtotalMinor;
       const nextFee = Math.round(nextSubtotal * 0.1);

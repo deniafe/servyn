@@ -43,6 +43,13 @@
       "when": 1795690787956,
       "tag": "0005_lean_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795698658398,
+      "tag": "0006_heavy_dark_beast",
+      "breakpoints": true
     }
   ]
 }

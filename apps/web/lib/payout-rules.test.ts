@@ -1,0 +1,105 @@
+import { describe, expect, it } from "vitest";
+import {
+  canAutoReleaseAt48h,
+  evaluateConfirmation,
+  FORTY_EIGHT_HOURS_MS,
+} from "./payout-rules";
+
+describe("payout-rules", () => {
+  const t0 = new Date("2026-11-26T12:00:00.000Z");
+
+  it("holds payout for 48 hours and notifies customer when only provider confirms first", () => {
+    const decision = evaluateConfirmation(
+      {
+        status: "paid_held",
+        disputed: false,
+        customerConfirmedAt: null,
+        providerConfirmedAt: null,
+        autoReleaseAt: null,
+      },
+      "provider",
+      t0,
+    );
+
+    expect(decision.action).toBe("await_second_or_48h");
+    if (decision.action === "await_second_or_48h") {
+      expect(decision.notifyParty).toBe("customer");
+      expect(decision.providerConfirmedAt).toEqual(t0);
+      expect(decision.customerConfirmedAt).toBeNull();
+      expect(decision.autoReleaseAt.getTime()).toBe(t0.getTime() + FORTY_EIGHT_HOURS_MS);
+    }
+  });
+
+  it("holds payout for 48 hours and notifies provider when only customer confirms first", () => {
+    const decision = evaluateConfirmation(
+      {
+        status: "paid_held",
+        disputed: false,
+        customerConfirmedAt: null,
+        providerConfirmedAt: null,
+        autoReleaseAt: null,
+      },
+      "customer",
+      t0,
+    );
+
+    expect(decision.action).toBe("await_second_or_48h");
+    if (decision.action === "await_second_or_48h") {
+      expect(decision.notifyParty).toBe("provider");
+      expect(decision.customerConfirmedAt).toEqual(t0);
+      expect(decision.providerConfirmedAt).toBeNull();
+    }
+  });
+
+  it("releases payout straight away when both customer and provider confirm", () => {
+    const t1 = new Date(t0.getTime() + 5 * 60 * 1000);
+    const decision = evaluateConfirmation(
+      {
+        status: "delivered",
+        disputed: false,
+        customerConfirmedAt: null,
+        providerConfirmedAt: t0,
+        autoReleaseAt: new Date(t0.getTime() + FORTY_EIGHT_HOURS_MS),
+      },
+      "customer",
+      t1,
+    );
+
+    expect(decision.action).toBe("release_now");
+    if (decision.action === "release_now") {
+      expect(decision.status).toBe("released");
+      expect(decision.releasedAt).toEqual(t1);
+      expect(decision.autoReleaseAt).toBeNull();
+    }
+  });
+
+  it("blocks both confirmation payout and 48h auto-release when disputed is true", () => {
+    const after48h = new Date(t0.getTime() + FORTY_EIGHT_HOURS_MS + 1000);
+    const disputedState = {
+      status: "delivered" as const,
+      disputed: true,
+      customerConfirmedAt: null,
+      providerConfirmedAt: t0,
+      autoReleaseAt: new Date(t0.getTime() + FORTY_EIGHT_HOURS_MS),
+    };
+
+    expect(evaluateConfirmation(disputedState, "customer", after48h)).toEqual({
+      action: "blocked_disputed",
+    });
+    expect(canAutoReleaseAt48h(disputedState, after48h)).toBe(false);
+  });
+
+  it("allows 48h auto-release once 48h has elapsed and disputed is false", () => {
+    const after48h = new Date(t0.getTime() + FORTY_EIGHT_HOURS_MS);
+    const eligibleState = {
+      status: "delivered" as const,
+      disputed: false,
+      customerConfirmedAt: null,
+      providerConfirmedAt: t0,
+      autoReleaseAt: new Date(t0.getTime() + FORTY_EIGHT_HOURS_MS),
+    };
+
+    expect(canAutoReleaseAt48h(eligibleState, new Date(after48h.getTime() - 1000))).toBe(false);
+    expect(canAutoReleaseAt48h(eligibleState, after48h)).toBe(true);
+  });
+});

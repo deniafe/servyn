@@ -602,7 +602,10 @@ export function MessagesWorkspace({ customerName }: { customerName: string }) {
                             </button>
                           ) : null}
 
-                          {attachedInvoice.status === "paid_held" &&
+                          {(attachedInvoice.status === "paid_held" ||
+                            (attachedInvoice.status === "delivered" &&
+                              !attachedInvoice.providerConfirmedAt)) &&
+                          !attachedInvoice.disputed &&
                           effectivePerspective === "provider" ? (
                             <button
                               type="button"
@@ -612,8 +615,8 @@ export function MessagesWorkspace({ customerName }: { customerName: string }) {
                               <Sparkles className="size-3.5" aria-hidden="true" />
                               <span>
                                 {attachedInvoice.kind === "service"
-                                  ? "Mark service completed"
-                                  : "Mark order shipped / delivered"}
+                                  ? "Confirm service completed"
+                                  : "Confirm order delivered"}
                               </span>
                             </button>
                           ) : null}
@@ -648,8 +651,23 @@ export function MessagesWorkspace({ customerName }: { customerName: string }) {
                     ) : null}
                   </div>
 
+                  {latestInvoice.status === "delivered" && !latestInvoice.disputed ? (
+                    <p className="rounded-lg bg-gold-50 px-3 py-2 text-[11.5px] font-medium text-gold-ink">
+                      1 of 2 confirmed — payout releases in 48 hours (with a 24h reminder email),
+                      or straight away once both confirm.
+                    </p>
+                  ) : null}
+
+                  {(latestInvoice.status === "disputed" || latestInvoice.disputed) ? (
+                    <p className="rounded-lg bg-blush px-3 py-2 text-[11.5px] font-semibold text-blush-d">
+                      Disputed — payout is paused and nothing will be paid out until cleared.
+                    </p>
+                  ) : null}
+
                   {(latestInvoice.status === "paid_held" ||
-                    latestInvoice.status === "delivered") &&
+                    (latestInvoice.status === "delivered" &&
+                      !latestInvoice.customerConfirmedAt)) &&
+                  !latestInvoice.disputed &&
                   effectivePerspective === "customer" ? (
                     <div className="space-y-2.5 pt-1">
                       <p className="font-serif text-sm font-semibold text-ink">
