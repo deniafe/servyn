@@ -857,9 +857,9 @@ export function VendorDashboardClient({
               <span>How Protected Payments Work for Vendors</span>
             </div>
             <p className="leading-relaxed">
-              Customers pay via Stripe at booking or invoice acceptance. Funds are held within
-              Servyn (not escrow) until the customer confirms the service was delivered
-              satisfactorily, at which point your full agreed price becomes available and released.
+              Customers pay via Stripe at booking or invoice acceptance. Funds are held in Stripe
+              (not escrow) until you and your customer both confirm delivery, or 48 hours after one
+              of you does, at which point your full agreed price becomes available and released.
             </p>
 
             <div className="border-t border-line pt-4">

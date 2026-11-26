@@ -1266,10 +1266,10 @@ export function ServiceProviderDetail({
               />
               <span>
                 <strong className="font-semibold text-cream">
-                  Protected payment.
+                  Protected payment (not escrow).
                 </strong>{" "}
-                Released when you confirm completion, or 48h after your provider
-                marks it done.{" "}
+                Held in Stripe and released when you and your provider both confirm, or 48 hours
+                after one of you does.{" "}
                 <Link
                   href="/#protected-payment"
                   className="font-semibold text-gold-300 underline decoration-gold-300/60 underline-offset-2 hover:text-gold-400"

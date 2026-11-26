@@ -349,8 +349,8 @@ export function StripeCheckoutDialog({
             <div className="flex items-start gap-2 rounded-md border border-gold-300 bg-gold-50 p-3 text-[11.5px] text-ink-2">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden="true" />
               <span>
-                <strong>Protected payment (not escrow):</strong> Processed by Stripe and held until
-                you confirm satisfactory delivery (or 48h after completion).
+                <strong>Protected payment (not escrow):</strong> Held in Stripe until you and your
+                provider both confirm, or 48 hours after one of you does.
               </span>
             </div>
 

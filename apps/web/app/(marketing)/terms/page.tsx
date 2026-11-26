@@ -37,8 +37,9 @@ export default function TermsPage() {
             <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>
                 <strong>Protected payment (not escrow):</strong> Customer payments are processed
-                via Stripe and held within Servyn until the customer confirms satisfactory delivery
-                of the service or goods, or until an open dispute is resolved.
+                and held in Stripe until you and your provider both confirm satisfactory delivery of
+                the service or goods, or 48 hours after one of you does, unless an open dispute is
+                being reviewed.
               </li>
               <li>
                 <strong>Transparent 10% booking fee:</strong> Servyn adds a 10% platform fee on top

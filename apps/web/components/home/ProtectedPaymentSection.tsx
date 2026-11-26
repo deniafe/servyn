@@ -25,7 +25,7 @@ const STEPS: ReadonlyArray<PaymentStep> = [
     step: 1,
     icon: CreditCard,
     title: "Book & pay",
-    body: "Payment is processed by Stripe and held until the service is completed and confirmed.",
+    body: "Payment is processed and held in Stripe (not escrow) until the service is completed and confirmed.",
   },
   {
     step: 2,
@@ -37,7 +37,7 @@ const STEPS: ReadonlyArray<PaymentStep> = [
     step: 3,
     icon: CircleCheck,
     title: "You confirm — or 48h",
-    body: "Confirm to release; no response auto-releases 48h after they mark complete.",
+    body: "Released when you and your provider both confirm, or 48 hours after one of you does.",
   },
   {
     step: 4,

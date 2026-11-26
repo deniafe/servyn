@@ -29,10 +29,10 @@ export default function RefundsPolicyPage() {
               <span>How Protected Payments Work (Not Escrow)</span>
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-ink-2">
-              When you pay for a service or product on Servyn via Stripe, your payment is held
-              within Servyn&apos;s protected-payment flow (not escrow) until you confirm the service
-              was delivered or goods arrived satisfactorily. If a problem is reported, payout is
-              paused immediately for human review.
+              When you pay for a service or product on Servyn via Stripe, your payment is held in
+              Stripe (not escrow) until you and your provider both confirm delivery, or 48 hours
+              after one of you does. If a problem is reported, payout is paused immediately for
+              human review.
             </p>
           </div>
 

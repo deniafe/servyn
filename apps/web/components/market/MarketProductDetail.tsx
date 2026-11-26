@@ -308,8 +308,8 @@ export function MarketProductDetail({ product }: { product: MarketProduct }) {
           <div className="flex items-start gap-2 rounded-lg border border-line bg-surface-2 p-3 text-xs text-mut">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-700" aria-hidden="true" />
             <span>
-              <strong className="text-ink">Protected payment (not escrow):</strong> Processed via
-              Stripe and held until you confirm delivery.
+              <strong className="text-ink">Protected payment (not escrow):</strong> Held in Stripe
+              until you and the seller both confirm delivery, or 48 hours after one of you does.
             </span>
           </div>
         </div>
