@@ -1265,16 +1265,20 @@ export function ServicesDirectory({
                           href={`/services/${provider.id}`}
                           className="group"
                         >
-                          <div className="flex items-start gap-1">
+                          <div className="flex items-start gap-1.5">
                             <h2 className="font-serif text-[16px] leading-snug font-semibold text-ink transition-colors group-hover:text-leaf-700">
                               {provider.name}
                             </h2>
-                            {provider.verified && (
+                            {provider.verified && provider.ownerUserId ? (
                               <BadgeCheck
                                 className="mt-0.5 size-3.5 shrink-0 text-gold-600"
                                 aria-label="Verified provider"
                               />
-                            )}
+                            ) : !provider.ownerUserId ? (
+                              <span className="mt-0.5 shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-mut">
+                                Sample
+                              </span>
+                            ) : null}
                           </div>
 
                           <p className="mt-1 flex items-center gap-1 text-[12px] text-mut">

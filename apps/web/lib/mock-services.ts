@@ -120,7 +120,7 @@ function buildUpcomingCalendarDays(count = 10): ReadonlyArray<{
   ] as const;
   const now = new Date();
   return Array.from({ length: count }, (_, offset) => {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset + 1);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");

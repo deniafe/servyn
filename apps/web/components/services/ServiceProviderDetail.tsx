@@ -43,6 +43,23 @@ function formatGBP(amount: number): string {
   return `£${amount.toFixed(2)}`;
 }
 
+function isSlotAtLeast24HoursAway(dayId: string, time: string, nowMs: number): boolean {
+  if (nowMs <= 0) return true;
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayId);
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!dateMatch || !timeMatch) return true;
+  const slotDate = new Date(
+    Number(dateMatch[1]),
+    Number(dateMatch[2]) - 1,
+    Number(dateMatch[3]),
+    Number(timeMatch[1]),
+    Number(timeMatch[2]),
+    0,
+    0,
+  );
+  return slotDate.getTime() >= nowMs + 24 * 60 * 60 * 1000;
+}
+
 function getDiscountedOfferingPrice(
   offering: ServiceProvider["offerings"][number],
   offer: DemoInvoice | null,
@@ -110,6 +127,12 @@ export function ServiceProviderDetail({
   const isOwner = Boolean(
     currentUserId && provider.ownerUserId && currentUserId === provider.ownerUserId,
   );
+  const isSampleProfile = !provider.ownerUserId;
+  const nowMinuteMs = React.useSyncExternalStore(
+    () => () => {},
+    () => Math.floor(Date.now() / 60_000) * 60_000,
+    () => 0,
+  );
   const offerIdParam = React.useSyncExternalStore(
     () => () => {},
     () => new URLSearchParams(window.location.search).get("offer"),
@@ -117,19 +140,16 @@ export function ServiceProviderDetail({
   );
 
   const activeServiceOffer = React.useMemo<DemoInvoice | null>(() => {
-    if (isOwner) return null;
+    if (!currentUserId || isOwner) return null;
     const eligible = invoices.filter((inv) => {
       if (inv.kind !== "service" || inv.status !== "sent") return false;
+      if (inv.customerUserId !== currentUserId) return false;
       const conv = conversations.find((c) => c.id === inv.conversationId);
       const matchesProvider =
         conv?.providerSlug === provider.id ||
         Boolean(provider.ownerUserId && inv.providerUserId === provider.ownerUserId) ||
         inv.providerName.toLowerCase() === provider.name.toLowerCase();
-      if (!matchesProvider) return false;
-      if (currentUserId && inv.customerUserId && inv.customerUserId !== currentUserId) {
-        return false;
-      }
-      return true;
+      return matchesProvider;
     });
     if (eligible.length === 0) return null;
     if (offerIdParam) {
@@ -145,9 +165,26 @@ export function ServiceProviderDetail({
     "Customer";
   const reduce = useReducedMotion();
   const headerReveal = useRevealMotion();
+  const effectiveAvailability = React.useMemo(
+    () =>
+      provider.availability.map((day) => {
+        const slots = day.slots.map((slot) => ({
+          ...slot,
+          available:
+            slot.available &&
+            isSlotAtLeast24HoursAway(day.id, slot.time, nowMinuteMs),
+        }));
+        return {
+          ...day,
+          slots,
+          freeCount: slots.filter((s) => s.available).length,
+        };
+      }),
+    [provider.availability, nowMinuteMs],
+  );
   const defaultDayId =
-    provider.availability.find((day) => day.freeCount > 0)?.id ??
-    provider.availability[0]?.id ??
+    effectiveAvailability.find((day) => day.freeCount > 0)?.id ??
+    effectiveAvailability[0]?.id ??
     "";
 
   const [isSaved, setIsSaved] = React.useState<boolean>(
@@ -170,8 +207,8 @@ export function ServiceProviderDetail({
   const selectedOffering =
     provider.offerings.find((item) => item.id === selectedOfferingId) ?? null;
   const activeDay =
-    provider.availability.find((day) => day.id === selectedDayId) ??
-    provider.availability[0];
+    effectiveAvailability.find((day) => day.id === selectedDayId) ??
+    effectiveAvailability[0];
 
   const selectedPricing = selectedOffering
     ? getDiscountedOfferingPrice(
@@ -214,6 +251,11 @@ export function ServiceProviderDetail({
     }
     if (!selectedTime) {
       setBookingHint("Now pick an available day and time slot.");
+      scrollToSection("availability");
+      return;
+    }
+    if (!activeDay || !isSlotAtLeast24HoursAway(activeDay.id, selectedTime, nowMinuteMs)) {
+      setBookingHint("Bookings require at least 24 hours' notice. Please choose a later slot.");
       scrollToSection("availability");
       return;
     }
@@ -327,7 +369,7 @@ export function ServiceProviderDetail({
                   {provider.name}
                 </h1>
 
-                {provider.verified && (
+                {provider.verified && !isSampleProfile ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-gold-200 bg-gold-100 px-2.5 py-0.5 text-[11.5px] font-bold text-gold-ink">
                     <ShieldCheck
                       className="size-3.5 text-gold-600"
@@ -336,7 +378,11 @@ export function ServiceProviderDetail({
                     />
                     <span>Verified</span>
                   </span>
-                )}
+                ) : isSampleProfile ? (
+                  <span className="inline-flex items-center rounded-full bg-surface-2 px-2.5 py-0.5 text-[11.5px] font-semibold text-mut">
+                    Sample profile
+                  </span>
+                ) : null}
 
                 {provider.enhancedChecks && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-2.5 py-0.5 text-[11.5px] font-semibold text-leaf-800">
@@ -563,14 +609,20 @@ export function ServiceProviderDetail({
                   {tag}
                 </span>
               ))}
-              <span className="inline-flex items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-3 py-1 text-[12px] font-semibold text-leaf-800">
-                <ShieldCheck
-                  className="size-3.5 text-leaf-600"
-                  strokeWidth={2}
-                  aria-hidden="true"
-                />
-                <span>ID verified</span>
-              </span>
+              {isSampleProfile ? (
+                <span className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-[12px] font-medium text-mut">
+                  Illustrative sample profile
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-3 py-1 text-[12px] font-semibold text-leaf-800">
+                  <ShieldCheck
+                    className="size-3.5 text-leaf-600"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                  <span>ID verified</span>
+                </span>
+              )}
               {provider.enhancedChecks && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-leaf-200 bg-leaf-50 px-3 py-1 text-[12px] font-semibold text-leaf-800">
                   <ShieldCheck
@@ -728,7 +780,7 @@ export function ServiceProviderDetail({
 
             {/* Horizontal scrollable day strip */}
             <div className="mt-4 flex gap-2 overflow-x-auto pb-2.5">
-              {provider.availability.map((day) => {
+              {effectiveAvailability.map((day) => {
                 const isSelected = activeDay?.id === day.id;
                 const isUnavailable = day.freeCount === 0;
 
@@ -894,6 +946,12 @@ export function ServiceProviderDetail({
             >
               Reviews
             </h2>
+            {isSampleProfile ? (
+              <p className="mt-1 text-xs text-mut">
+                Illustrative sample profile — real verified reviews and booking counts appear on
+                live Servyn provider listings.
+              </p>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-1 items-center gap-6 sm:grid-cols-[136px_1fr]">
               <div>
