@@ -118,15 +118,15 @@ export function ServicesDirectory({
         tagline: svc.title,
         about: svc.description,
         joinedLabel: "Joined 2026",
-        completedBookings: 1,
+        completedBookings: svc.soldCount ?? 0,
         serviceRadiusLabel: `${svc.area} & Greater Manchester`,
         mapPinPosition: { xPercent: 52, yPercent: 48 },
         nextSlot: "Sat 10:30",
         slots: ["10:30", "13:30", "15:00"],
         responseTime: "Replies in ~15 mins",
         bannerVar: "var(--sv-peach)",
-        rating: 5.0,
-        reviews: 1,
+        rating: svc.avgRating ?? 0,
+        reviews: svc.reviewCount ?? 0,
         duration: `${svc.durationMins} mins`,
         tags: [svc.title, `${svc.durationMins} mins`, svc.area],
         startingPrice: pricePounds,
@@ -1303,12 +1303,24 @@ export function ServicesDirectory({
                             ))}
                           </div>
                           <p className="text-[12.5px] tabular-nums">
-                            <span className="font-bold text-ink">
-                              {provider.rating.toFixed(1)}
-                            </span>{" "}
-                            <span className="text-mut">
-                              ({provider.reviews})
-                            </span>
+                            {provider.reviews > 0 ? (
+                              <>
+                                <span className="font-bold text-ink">
+                                  {provider.rating.toFixed(1)}
+                                </span>{" "}
+                                <span className="text-mut">
+                                  ({provider.reviews})
+                                </span>
+                              </>
+                            ) : (
+                              <span className="font-semibold text-mut">New</span>
+                            )}
+                            {provider.completedBookings > 0 ? (
+                              <span className="text-mut">
+                                {" "}
+                                · {provider.completedBookings} booked
+                              </span>
+                            ) : null}
                           </p>
                         </div>
 

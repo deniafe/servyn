@@ -25,6 +25,9 @@ export interface DemoServiceListing {
   priceMinor: number;
   description: string;
   photos?: string[];
+  soldCount?: number;
+  reviewCount?: number;
+  avgRating?: number;
   createdAt: string;
 }
 
@@ -46,6 +49,9 @@ export interface DemoProductListing {
   unit: string;
   originNote: string;
   photos?: string[];
+  soldCount?: number;
+  reviewCount?: number;
+  avgRating?: number;
   createdAt: string;
 }
 
@@ -506,6 +512,9 @@ interface RawListingDto {
   stock?: number | null;
   unit?: string | null;
   photos?: string[] | null;
+  soldCount?: number;
+  reviewCount?: number;
+  avgRating?: number;
   createdAt: string;
 }
 
@@ -539,6 +548,9 @@ export async function syncPublicListings(): Promise<void> {
           priceMinor: row.priceMinor,
           description: row.description,
           photos: Array.isArray(row.photos) ? row.photos : [],
+          soldCount: typeof row.soldCount === "number" ? row.soldCount : 0,
+          reviewCount: typeof row.reviewCount === "number" ? row.reviewCount : 0,
+          avgRating: typeof row.avgRating === "number" ? row.avgRating : 0,
           createdAt: row.createdAt,
         });
       } else {
@@ -556,6 +568,9 @@ export async function syncPublicListings(): Promise<void> {
           unit: row.unit ?? "item",
           originNote: row.description,
           photos: Array.isArray(row.photos) ? row.photos : [],
+          soldCount: typeof row.soldCount === "number" ? row.soldCount : 0,
+          reviewCount: typeof row.reviewCount === "number" ? row.reviewCount : 0,
+          avgRating: typeof row.avgRating === "number" ? row.avgRating : 0,
           createdAt: row.createdAt,
         });
       }
@@ -1022,7 +1037,14 @@ function syncInvoiceAction(invoiceId: string, payload: Record<string, unknown>) 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
-  }).then(() => syncUserMarketplaceState()).catch(() => {});
+  })
+    .then(() => {
+      void syncUserMarketplaceState();
+      if (payload.action === "pay_held" || payload.action === "confirm_release") {
+        void syncPublicListings();
+      }
+    })
+    .catch(() => {});
 }
 
 export function updateServiceOfferBookingDetails(
@@ -1175,7 +1197,12 @@ export function submitVerifiedReview(input: {
         rating: input.rating,
         comment: input.comment.trim(),
       }),
-    }).then(() => syncUserMarketplaceState()).catch(() => {});
+    })
+      .then(() => {
+        void syncUserMarketplaceState();
+        void syncPublicListings();
+      })
+      .catch(() => {});
   }
   return review;
 }

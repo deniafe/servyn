@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { desc, getDb, liveListings } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
+import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
 
 const CreateListingSchema = z.object({
   kind: z.enum(["service", "product"]),
@@ -82,13 +83,20 @@ export async function GET(): Promise<NextResponse> {
       .select()
       .from(liveListings)
       .orderBy(desc(liveListings.createdAt));
+    const statsMap = await loadMarketplaceStatsMap(rows);
 
     return NextResponse.json({
       ok: true,
-      listings: rows.map((r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-      })),
+      listings: rows.map((r) => {
+        const stats = statsMap.get(r.id);
+        return {
+          ...r,
+          soldCount: stats?.soldCount ?? 0,
+          reviewCount: stats?.reviewCount ?? 0,
+          avgRating: stats?.avgRating ?? 0,
+          createdAt: r.createdAt.toISOString(),
+        };
+      }),
     });
   } catch {
     return NextResponse.json(

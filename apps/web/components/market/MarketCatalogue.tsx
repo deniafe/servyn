@@ -87,11 +87,13 @@ export function MarketCatalogue({
       bulkPrice: Number((prd.bulkPriceMinor / 100).toFixed(2)),
       bulkMinQty: prd.minBulkQty,
       packSize: `${prd.minBulkQty} × ${prd.unit}`,
-      rating: 5.0,
-      sold: 0,
+      rating: prd.avgRating ?? 0,
+      reviewCount: prd.reviewCount ?? 0,
+      sold: prd.soldCount ?? 0,
       featuredOrder: -1 - idx,
     }));
-    return [...mapped, ...products];
+    const mappedIds = new Set(mapped.map((m) => m.id));
+    return [...mapped, ...products.filter((p) => !mappedIds.has(p.id))];
   }, [customProducts, products, categories]);
 
   const {
@@ -571,9 +573,13 @@ export function MarketCatalogue({
                         className="size-3.5 fill-gold-500 text-gold-500"
                         aria-hidden="true"
                       />
-                      <span className="font-bold text-ink">
-                        {product.rating.toFixed(1)}
-                      </span>
+                      {product.rating > 0 ? (
+                        <span className="font-bold text-ink">
+                          {product.rating.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-mut">New</span>
+                      )}
                       <span>· {product.sold} sold</span>
                     </p>
 

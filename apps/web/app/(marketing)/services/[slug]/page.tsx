@@ -11,6 +11,7 @@ import {
   type ServiceProvider,
 } from "@/lib/data/services";
 import { SERVICE_PROVIDERS } from "@/lib/mock-services";
+import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
 
 async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
   const staticProvider = await getServiceProviderBySlug(slug, true);
@@ -26,6 +27,8 @@ async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
 
     if (!row || row.kind !== "service") return null;
 
+    const statsMap = await loadMarketplaceStatsMap([row]);
+    const stats = statsMap.get(row.id);
     const templateAvailability = SERVICE_PROVIDERS[0]?.availability ?? [];
     const initials = row.ownerName
       .split(/\s+/)
@@ -50,15 +53,15 @@ async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
       tagline: row.title,
       about: row.description,
       joinedLabel: "Active provider",
-      completedBookings: 0,
+      completedBookings: stats?.soldCount ?? 0,
       serviceRadiusLabel: `Serves ${row.area} & Greater Manchester`,
       mapPinPosition: { xPercent: 50, yPercent: 50 },
       nextSlot: "Available this week",
       slots: ["10:30", "13:30", "15:00"],
       responseTime: "Replies promptly",
       bannerVar: "--sv-mint",
-      rating: 5.0,
-      reviews: 0,
+      rating: stats?.avgRating ?? 0,
+      reviews: stats?.reviewCount ?? 0,
       duration: `${row.durationMins ?? 60} mins`,
       tags: [row.category, row.area],
       startingPrice: Number((row.priceMinor / 100).toFixed(2)),
@@ -77,14 +80,14 @@ async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
           price: Number((row.priceMinor / 100).toFixed(2)),
         },
       ],
-      ratingBreakdown: [
+      ratingBreakdown: stats?.ratingBreakdown ?? [
         { stars: 5, count: 0 },
         { stars: 4, count: 0 },
         { stars: 3, count: 0 },
         { stars: 2, count: 0 },
         { stars: 1, count: 0 },
       ],
-      reviewList: [],
+      reviewList: stats?.reviewList ?? [],
       availability: templateAvailability,
     };
   } catch {

@@ -4,6 +4,7 @@ import { eq, getDb, liveListings, or } from "@servyn/db";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteHeader } from "@/components/home/SiteHeader";
 import { MarketProductDetail } from "@/components/market/MarketProductDetail";
+import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
 import {
   MARKET_PRODUCTS,
   type MarketCategory,
@@ -25,6 +26,8 @@ async function resolveProduct(slug: string): Promise<MarketProduct | null> {
 
     if (!row || row.kind !== "product") return null;
 
+    const statsMap = await loadMarketplaceStatsMap([row]);
+    const stats = statsMap.get(row.id);
     const retailPrice = Number((row.priceMinor / 100).toFixed(2));
     const bulkPrice = Number(((row.bulkPriceMinor ?? row.priceMinor) / 100).toFixed(2));
     const minBulkQty = row.minBulkQty ?? 5;
@@ -43,8 +46,10 @@ async function resolveProduct(slug: string): Promise<MarketProduct | null> {
       packSize: `${minBulkQty} × ${row.unit ?? "item"}`,
       originNote: row.description,
       category: (row.category as MarketCategory) || "Food & Pantry",
-      rating: 5.0,
-      sold: 0,
+      rating: stats?.avgRating ?? 0,
+      reviewCount: stats?.reviewCount ?? 0,
+      reviewList: stats?.reviewList ?? [],
+      sold: stats?.soldCount ?? 0,
       retailPrice,
       bulkPrice,
       bulkMinQty: minBulkQty,

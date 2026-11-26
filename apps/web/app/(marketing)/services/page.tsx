@@ -15,6 +15,7 @@ import {
   type ServiceProvider,
 } from "@/lib/data/services";
 import { SERVICE_PROVIDERS } from "@/lib/mock-services";
+import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
 
 export const metadata: Metadata = {
   title: "Services in Manchester — Servyn",
@@ -53,9 +54,11 @@ async function loadLiveServiceProviders(
       .where(eq(liveListings.kind, "service"))
       .orderBy(desc(liveListings.createdAt));
 
+    const statsMap = await loadMarketplaceStatsMap(rows);
     const templateAvailability = SERVICE_PROVIDERS[0]?.availability ?? [];
 
     return rows.map((row, idx) => {
+      const stats = statsMap.get(row.id);
       const catMeta =
         categories.find((c) => c.label.toLowerCase() === row.category.toLowerCase()) ??
         categories[0]!;
@@ -85,15 +88,15 @@ async function loadLiveServiceProviders(
         tagline: row.title,
         about: row.description,
         joinedLabel: "Joined 2026",
-        completedBookings: 1,
+        completedBookings: stats?.soldCount ?? 0,
         serviceRadiusLabel: `${row.area} & Greater Manchester`,
         mapPinPosition: { xPercent: 52, yPercent: 48 },
         nextSlot: "Available this week",
         slots: ["10:30", "13:30", "15:00"],
         responseTime: "Replies promptly",
         bannerVar: "var(--sv-peach)",
-        rating: 5.0,
-        reviews: 1,
+        rating: stats?.avgRating ?? 0,
+        reviews: stats?.reviewCount ?? 0,
         duration: `${durationMins} mins`,
         tags: [row.title, `${durationMins} mins`, row.area],
         startingPrice: pricePounds,
@@ -116,14 +119,14 @@ async function loadLiveServiceProviders(
             price: pricePounds,
           },
         ],
-        ratingBreakdown: [
-          { stars: 5, count: 1 },
+        ratingBreakdown: stats?.ratingBreakdown ?? [
+          { stars: 5, count: 0 },
           { stars: 4, count: 0 },
           { stars: 3, count: 0 },
           { stars: 2, count: 0 },
           { stars: 1, count: 0 },
         ],
-        reviewList: [],
+        reviewList: stats?.reviewList ?? [],
         availability: templateAvailability,
       };
     });

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { desc, eq, getDb, liveListings } from "@servyn/db";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteHeader } from "@/components/home/SiteHeader";
 import { MarketCatalogue } from "@/components/market/MarketCatalogue";
@@ -11,6 +12,8 @@ import {
   type MarketCategory,
   type PricingMode,
 } from "@/lib/data/market";
+import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
+import type { MarketProduct, MarketProductId } from "@/lib/mock-market";
 
 export const metadata: Metadata = {
   title: "The African Market — Servyn",
@@ -35,6 +38,53 @@ function parseCategory(
   return "All";
 }
 
+async function loadLiveMarketProducts(
+  categories: ReadonlyArray<"All" | MarketCategory>,
+): Promise<MarketProduct[]> {
+  try {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(liveListings)
+      .where(eq(liveListings.kind, "product"))
+      .orderBy(desc(liveListings.createdAt));
+
+    const statsMap = await loadMarketplaceStatsMap(rows);
+
+    return rows.map((row, idx) => {
+      const stats = statsMap.get(row.id);
+      const retailPrice = Number((row.priceMinor / 100).toFixed(2));
+      const bulkPrice = Number(((row.bulkPriceMinor ?? row.priceMinor) / 100).toFixed(2));
+      const minBulkQty = row.minBulkQty ?? 5;
+
+      return {
+        id: row.id as MarketProductId,
+        slug: row.slug,
+        ownerUserId: row.ownerUserId,
+        photos: Array.isArray(row.photos) ? row.photos : [],
+        stock: row.stock ?? 20,
+        unit: row.unit ?? "item",
+        vendor: row.ownerName,
+        vendorArea: row.area || "Manchester",
+        title: row.title,
+        name: row.title,
+        packSize: `${minBulkQty} × ${row.unit ?? "item"}`,
+        originNote: row.description,
+        category: (categories.find((c) => c === row.category) ?? "Food & Pantry") as MarketCategory,
+        rating: stats?.avgRating ?? 0,
+        reviewCount: stats?.reviewCount ?? 0,
+        sold: stats?.soldCount ?? 0,
+        retailPrice,
+        bulkPrice,
+        bulkMinQty: minBulkQty,
+        featuredOrder: -1 - idx,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 async function MarketLoader({
   searchParams,
 }: {
@@ -46,6 +96,12 @@ async function MarketLoader({
     listMarketProducts(),
     getMarketCategories(),
   ]);
+  const liveProducts = await loadLiveMarketProducts(categories);
+  const liveIds = new Set(liveProducts.map((p) => p.id));
+  const combinedProducts = [
+    ...liveProducts,
+    ...products.filter((p) => !liveIds.has(p.id)),
+  ];
 
   const initialQuery = typeof params.q === "string" ? params.q.trim() : "";
   const initialMode = parsePricingMode(params.mode);
@@ -54,7 +110,7 @@ async function MarketLoader({
   return (
     <MarketCatalogue
       key={`${initialQuery}|${initialCategory}|${initialMode}`}
-      products={products}
+      products={combinedProducts}
       categories={categories}
       initialQuery={initialQuery}
       initialCategory={initialCategory}

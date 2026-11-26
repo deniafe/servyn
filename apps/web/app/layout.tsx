@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   title: "Servyn — Find your people. Book your services. Shop your culture.",
   description:
     "Servyn is a UK-focused, Afro-Caribbean marketplace to discover and book trusted local services, shop African products, and build lasting relationships with the people and businesses you choose. Live in Manchester.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

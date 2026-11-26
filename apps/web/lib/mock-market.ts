@@ -30,6 +30,14 @@ export interface MarketProduct {
   originNote: string;
   category: MarketCategory;
   rating: number;
+  reviewCount?: number;
+  reviewList?: ReadonlyArray<{
+    id: string;
+    author: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }>;
   sold: number;
   retailPrice: number;
   bulkPrice: number;

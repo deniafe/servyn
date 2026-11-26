@@ -163,9 +163,21 @@ export function MarketProductDetail({ product }: { product: MarketProduct }) {
                 <Store className="size-3.5 text-leaf-700" aria-hidden="true" />
                 {product.vendor} · {product.vendorArea}
               </span>
-              <span className="inline-flex items-center gap-1 font-bold text-ink">
+              <span className="inline-flex items-center gap-1 font-bold text-ink tabular-nums">
                 <Star className="size-3.5 fill-gold-500 text-gold-500" aria-hidden="true" />
-                {product.rating.toFixed(1)}
+                {product.rating > 0 ? (
+                  <>
+                    <span>{product.rating.toFixed(1)}</span>
+                    {typeof product.reviewCount === "number" ? (
+                      <span className="font-normal text-mut">
+                        ({product.reviewCount} {product.reviewCount === 1 ? "review" : "reviews"})
+                      </span>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="font-semibold text-mut">New</span>
+                )}
+                <span className="font-normal text-mut">· {product.sold} sold</span>
               </span>
             </div>
           </div>
@@ -302,6 +314,48 @@ export function MarketProductDetail({ product }: { product: MarketProduct }) {
           </div>
         </div>
       </div>
+
+      {/* Customer Reviews */}
+      <section className="mt-8 rounded-[22px] border border-line bg-surface p-5 shadow-soft sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-serif text-xl font-semibold text-ink">
+            Customer reviews
+          </h2>
+          <p className="text-xs font-medium text-mut tabular-nums">
+            {product.sold} sold ·{" "}
+            {product.rating > 0
+              ? `${product.rating.toFixed(1)} average (${product.reviewCount ?? 0} reviews)`
+              : "No ratings yet"}
+          </p>
+        </div>
+
+        {product.reviewList && product.reviewList.length > 0 ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {product.reviewList.map((rev) => (
+              <article
+                key={rev.id}
+                className="rounded-xl border border-line bg-surface-2 p-4"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-ink">{rev.author}</p>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-ink tabular-nums">
+                    <Star className="size-3.5 fill-gold-500 text-gold-500" aria-hidden="true" />
+                    {rev.rating.toFixed(1)}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-ink-2">
+                  &ldquo;{rev.comment}&rdquo;
+                </p>
+                <p className="mt-2 text-[11px] text-mut">{rev.date}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-mut">
+            No reviews yet — be the first to rate this product after your order is delivered.
+          </p>
+        )}
+      </section>
     </div>
   );
 }

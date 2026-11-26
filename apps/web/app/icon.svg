@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <clipPath id="r">
+      <rect width="64" height="64" rx="14" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="64" fill="#0d3b29" />
+    <rect x="0" y="0" width="21.5" height="6" fill="#c0392b" />
+    <rect x="21.5" y="0" width="21" height="6" fill="#f2b84b" />
+    <rect x="42.5" y="0" width="21.5" height="6" fill="#1a5c42" />
+    <text
+      x="32"
+      y="47"
+      text-anchor="middle"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="40"
+      font-weight="700"
+      fill="#f2b84b"
+    >
+      S
+    </text>
+  </g>
+</svg>

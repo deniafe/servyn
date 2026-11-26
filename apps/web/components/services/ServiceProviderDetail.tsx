@@ -281,7 +281,7 @@ export function ServiceProviderDetail({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1240px] px-6 py-7 lg:px-8 lg:py-9">
+    <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:px-8 lg:py-9">
       {/* Breadcrumb back link */}
       <nav
         aria-label="Breadcrumb"

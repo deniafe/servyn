@@ -211,7 +211,7 @@ export function SiteHeader() {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2.5">
             <Link
               href="/list"
               className="hidden shrink-0 whitespace-nowrap rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-3.5 py-1.5 text-xs font-bold text-gold-ink shadow-gold transition-all hover:brightness-105 sm:inline-flex"
@@ -223,7 +223,7 @@ export function SiteHeader() {
               whileTap={{ scale: 0.88 }}
               onClick={handleSearchClick}
               aria-label="Search services"
-              className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-white/[0.08] hover:text-gold-300"
+              className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-cream/10 hover:text-gold-300"
             >
               <AnimatePresence>
                 {searchActive && !shouldReduceMotion && (
@@ -257,10 +257,10 @@ export function SiteHeader() {
               whileTap={{ scale: 0.94 }}
               onClick={openCart}
               aria-label={`Open basket (${cartCount} items)`}
-              className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-white/[0.08] hover:text-gold-300"
+              className="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-cream/10 hover:text-gold-300"
             >
               <ShoppingCart className="size-5" aria-hidden="true" />
-              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-[8px] border-2 border-leaf-900 bg-red px-1 text-[10px] font-extrabold text-white tabular-nums">
+              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-[8px] border-2 border-leaf-900 bg-red px-1 text-[10px] font-extrabold text-cream tabular-nums">
                 {cartCount}
               </span>
             </motion.button>
@@ -275,7 +275,7 @@ export function SiteHeader() {
               aria-label={mobileOpen ? "Close menu" : "Menu"}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((prev) => !prev)}
-              className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-white/[0.08] hover:text-gold-300 min-[921px]:hidden"
+              className="inline-flex size-10 cursor-pointer items-center justify-center rounded-[12px] text-cream-85 transition-colors hover:bg-cream/10 hover:text-gold-300 min-[921px]:hidden"
             >
               {mobileOpen ? (
                 <X className="size-5" aria-hidden="true" />
@@ -301,6 +301,13 @@ export function SiteHeader() {
             }
             className="apple-glass-header fixed inset-x-0 top-[var(--sv-hdr-h)] z-[99] flex flex-col gap-1 border-t border-cream-line px-5 pt-3.5 pb-5 text-cream shadow-[0_24px_40px_rgba(7,30,22,0.5)] min-[921px]:hidden"
           >
+            <Link
+              href="/list"
+              onClick={() => setMobileOpen(false)}
+              className="mb-1.5 inline-flex items-center justify-center rounded-full bg-linear-to-b from-grad-gold-1 to-grad-gold-2 px-4 py-2.5 text-sm font-bold text-gold-ink shadow-gold"
+            >
+              + List a service or product
+            </Link>
             <button
               type="button"
               aria-expanded={mobileBrowseOpen}
