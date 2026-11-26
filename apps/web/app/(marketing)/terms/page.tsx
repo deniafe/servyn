@@ -57,6 +57,20 @@ export default function TermsPage() {
               </li>
             </ul>
           </div>
+
+          <div className="rounded-[18px] border border-line bg-surface p-6 shadow-soft">
+            <h2 className="font-serif text-xl font-semibold text-ink">
+              Company Information
+            </h2>
+            <p className="mt-2 text-ink-2">
+              Servyn is operated by <strong>SERVYN LTD</strong> (Company No.{" "}
+              <strong>17603157</strong>), incorporated in England and Wales on 26 November 2026.
+            </p>
+            <p className="mt-1 text-mut">
+              Registered office: 5, Queens Chambers, John Dalton Street, Manchester, United Kingdom,
+              M2 6ET.
+            </p>
+          </div>
         </section>
       </main>
       <SiteFooter />

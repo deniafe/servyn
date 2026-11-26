@@ -97,7 +97,7 @@ export function SiteFooter() {
       <div className="border-t border-cream-line">
         <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 px-6 py-5 text-[12px] text-cream-60 lg:px-8">
           <p>
-            © 2026 Servyn · Manchester, UK · Payments powered by Stripe
+            © 2026 SERVYN LTD (Company No. 17603157, registered in England &amp; Wales) · 5, Queens Chambers, John Dalton Street, Manchester, M2 6ET · Payments powered by Stripe
           </p>
           <div
             aria-hidden="true"

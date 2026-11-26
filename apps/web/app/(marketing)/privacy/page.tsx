@@ -47,6 +47,10 @@ export default function PrivacyPolicyPage() {
                 <strong>AI Match minimisation:</strong> Only your search query and public listing
                 fields are used for AI Match — never personal contact or payment data.
               </li>
+              <li>
+                <strong>Data Controller:</strong> SERVYN LTD (Company No. 17603157), 5, Queens
+                Chambers, John Dalton Street, Manchester, United Kingdom, M2 6ET.
+              </li>
             </ul>
             <div className="mt-5">
               <Link href="/account" className="font-semibold text-leaf-700 hover:underline">

@@ -60,8 +60,11 @@ export function ContactFormClient() {
               <MapPin className="size-4" aria-hidden="true" />
             </span>
             <div>
-              <p className="font-semibold text-ink">Location</p>
-              <p className="text-mut">Manchester, United Kingdom</p>
+              <p className="font-semibold text-ink">Registered Office</p>
+              <p className="text-mut">SERVYN LTD (Company No. 17603157)</p>
+              <p className="text-mut">
+                5, Queens Chambers, John Dalton Street, Manchester, United Kingdom, M2 6ET
+              </p>
             </div>
           </div>
         </div>
