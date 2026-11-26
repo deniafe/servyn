@@ -7,6 +7,7 @@ import { CartProvider } from "@/components/home/CartProvider";
 import { CookieNotice } from "@/components/home/CookieNotice";
 import { MotionProvider } from "@/components/home/MotionProvider";
 import { PostHogProvider } from "@/components/observability/PostHogProvider";
+import { ReferralCapture } from "@/components/demo/ReferralCapture";
 import { servynClerkAppearance } from "@/lib/clerk-appearance";
 import "./globals.css";
 
@@ -49,6 +50,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   {children}
                   <CartDrawer />
                   <CookieNotice />
+                  <Suspense fallback={null}>
+                    <ReferralCapture />
+                  </Suspense>
                 </CartProvider>
               </MotionProvider>
             </PostHogProvider>

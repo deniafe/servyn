@@ -49,6 +49,7 @@ const NAV_ITEMS: ReadonlyArray<{
 }> = [
   { label: "Services", href: "/services", badge: null },
   { label: "Market", href: "/market", badge: null },
+  { label: "Community", href: "/community", badge: null },
   { label: "Bookings", href: "/dashboard", badge: null },
   { label: "Messages", href: "/messages", badge: null },
 ];
@@ -349,13 +350,9 @@ export function SiteHeader() {
                       <li key={item.label}>
                         <Link
                           href={item.href}
-                          onClick={(e) => {
+                          onClick={() => {
                             setMobileBrowseOpen(false);
                             setMobileOpen(false);
-                            if (item.label === "AI Match") {
-                              e.preventDefault();
-                              focusHeroSearch();
-                            }
                           }}
                           className="flex items-center gap-2.5 rounded-[8px] px-2 py-2 text-[14px] font-medium text-ink hover:bg-surface-2"
                         >

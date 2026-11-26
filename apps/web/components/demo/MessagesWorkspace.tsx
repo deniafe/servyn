@@ -399,6 +399,31 @@ export function MessagesWorkspace({ customerName }: { customerName: string }) {
               })}
             </div>
 
+            {/* Quick replies */}
+            <div className="flex gap-2 overflow-x-auto border-t border-line bg-surface-2 px-6 py-2.5">
+              {(perspective === "customer"
+                ? [
+                    "Does Saturday 10:30 work?",
+                    "Can we agree a bundle discount?",
+                    "Confirmed — please send the invoice",
+                  ]
+                : [
+                    "Yes, that slot is free — sending invoice now",
+                    "Happy to offer a 15% bundle discount!",
+                    "Service completed — please confirm in Bookings",
+                  ]
+              ).map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setDraft(chip)}
+                  className="shrink-0 cursor-pointer rounded-full border border-leaf-700/30 bg-surface px-3 py-1 text-[11px] font-semibold text-leaf-800 transition-colors hover:bg-leaf-800 hover:text-cream"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
             {/* Reply composer */}
             <form
               onSubmit={handleSendChat}

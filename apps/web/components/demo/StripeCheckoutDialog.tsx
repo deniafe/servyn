@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, CreditCard, Lock, ShieldCheck } from "lucide-react";
+import { CheckCircle2, CreditCard, Gift, Lock, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  computeServynFeeMinor,
   formatMinorGBP,
   markInvoicePaidHeld,
+  useDemoFlow,
   type DemoInvoice,
 } from "@/lib/demo-flow-store";
 
@@ -30,6 +32,8 @@ export function StripeCheckoutDialog({
   onOpenChange,
   onPaid,
 }: StripeCheckoutDialogProps) {
+  const { referralCreditActive } = useDemoFlow();
+  const [applyReferral, setApplyReferral] = React.useState(true);
   const [loading, setLoading] = React.useState(false);
   const [paidDone, setPaidDone] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -45,6 +49,10 @@ export function StripeCheckoutDialog({
 
   if (!invoice) return null;
 
+  const useReferral = referralCreditActive && applyReferral;
+  const effectiveFeeMinor = computeServynFeeMinor(invoice.subtotalMinor, useReferral);
+  const effectiveTotalMinor = invoice.subtotalMinor + effectiveFeeMinor;
+
   async function handlePay() {
     if (!invoice) return;
     setLoading(true);
@@ -58,8 +66,8 @@ export function StripeCheckoutDialog({
           invoiceId: invoice.id,
           title: invoice.title,
           subtotalMinor: invoice.subtotalMinor,
-          feeMinor: invoice.feeMinor,
-          totalMinor: invoice.totalMinor,
+          feeMinor: effectiveFeeMinor,
+          totalMinor: effectiveTotalMinor,
           kind: invoice.kind,
           providerName: invoice.providerName,
         }),
@@ -84,7 +92,7 @@ export function StripeCheckoutDialog({
         return;
       }
 
-      markInvoicePaidHeld(invoice.id, data.sessionId);
+      markInvoicePaidHeld(invoice.id, data.sessionId, useReferral);
       setPaidDone(true);
       setLoading(false);
       onPaid?.(invoice.id);
@@ -114,7 +122,7 @@ export function StripeCheckoutDialog({
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-leaf-700" aria-hidden="true" />
               <div className="space-y-1 text-xs text-ink-2">
                 <p className="font-semibold text-ink">
-                  {formatMinorGBP(invoice.totalMinor)} paid · Held by Servyn
+                  {formatMinorGBP(effectiveTotalMinor)} paid · Held by Servyn ({invoice.refId})
                 </p>
                 <p>
                   {invoice.providerName} has been notified. Once delivered, open your dashboard to
@@ -126,7 +134,7 @@ export function StripeCheckoutDialog({
             <DialogFooter>
               <Link
                 href="/dashboard"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 className="inline-flex w-full items-center justify-center rounded-full bg-leaf-800 px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-leaf-700"
               >
                 Go to Customer Dashboard
@@ -136,7 +144,12 @@ export function StripeCheckoutDialog({
         ) : (
           <div className="space-y-4">
             <div className="rounded-md border border-line bg-surface-2 p-4 text-xs">
-              <p className="font-semibold text-ink">{invoice.title}</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-ink">{invoice.title}</p>
+                <span className="rounded bg-surface px-2 py-0.5 text-[10.5px] font-bold text-mut">
+                  {invoice.refId}
+                </span>
+              </div>
               <p className="mt-0.5 text-mut">Provider: {invoice.providerName}</p>
               {invoice.agreedDate ? (
                 <p className="mt-1 text-ink-2">Slot: {invoice.agreedDate}</p>
@@ -150,18 +163,35 @@ export function StripeCheckoutDialog({
                 </p>
               ) : null}
 
+              {referralCreditActive ? (
+                <label className="mt-3 flex cursor-pointer items-center justify-between rounded-md border border-leaf-200 bg-mint/40 px-3 py-2 text-[11.5px] font-semibold text-mint-d">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Gift className="size-3.5" aria-hidden="true" />
+                    <span>Apply 5% referral fee discount</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={applyReferral}
+                    onChange={(e) => setApplyReferral(e.target.checked)}
+                    className="size-3.5 accent-leaf-700"
+                  />
+                </label>
+              ) : null}
+
               <div className="mt-3 space-y-1.5 border-t border-line pt-3">
                 <div className="flex justify-between text-ink-2">
-                  <span>Agreed price</span>
+                  <span>Agreed price (100% to provider)</span>
                   <span className="tabular-nums">{formatMinorGBP(invoice.subtotalMinor)}</span>
                 </div>
                 <div className="flex justify-between text-mut">
-                  <span>Servyn protected payment fee (10%)</span>
-                  <span className="tabular-nums">{formatMinorGBP(invoice.feeMinor)}</span>
+                  <span>
+                    Servyn protected payment fee ({useReferral ? "5% referral rate" : "10%"})
+                  </span>
+                  <span className="tabular-nums">{formatMinorGBP(effectiveFeeMinor)}</span>
                 </div>
                 <div className="flex justify-between border-t border-line pt-1.5 font-serif text-base font-semibold text-ink">
                   <span>Total due today</span>
-                  <span className="tabular-nums">{formatMinorGBP(invoice.totalMinor)}</span>
+                  <span className="tabular-nums">{formatMinorGBP(effectiveTotalMinor)}</span>
                 </div>
               </div>
             </div>
@@ -198,7 +228,7 @@ export function StripeCheckoutDialog({
             <DialogFooter className="gap-2 sm:justify-between">
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                 className="cursor-pointer rounded-full border-[1.5px] border-line-2 px-4 py-2 text-xs font-semibold text-ink-2 hover:border-leaf-500"
               >
                 Cancel
@@ -211,7 +241,7 @@ export function StripeCheckoutDialog({
               >
                 <Lock className="size-3.5" aria-hidden="true" />
                 <span>
-                  {loading ? "Processing with Stripe..." : `Pay ${formatMinorGBP(invoice.totalMinor)}`}
+                  {loading ? "Processing with Stripe..." : `Pay ${formatMinorGBP(effectiveTotalMinor)}`}
                 </span>
               </button>
             </DialogFooter>

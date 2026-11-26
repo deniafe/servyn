@@ -56,7 +56,7 @@ export const BROWSE_MARKET_PLACES: ReadonlyArray<BrowseMenuItem> = [
   { label: "Homeware & Craft", href: "/market", icon: Store },
   { label: "Manchester", href: "/services", icon: MapPin },
   { label: "All locations", href: "/services", icon: Globe },
-  { label: "AI Match", href: "/services?mode=ai", icon: Sparkles },
+  { label: "AI Match", href: "/ai-match", icon: Sparkles },
 ];
 
 function BrowseColumn({
@@ -100,7 +100,6 @@ function BrowseColumn({
 
 export function BrowseMenu({
   isActive = true,
-  onSelectAiMatch,
 }: {
   isActive?: boolean;
   onSelectAiMatch?: () => void;
@@ -118,14 +117,10 @@ export function BrowseMenu({
   }, []);
 
   function handleSelectItem(
-    e: React.MouseEvent<HTMLAnchorElement>,
-    item: BrowseMenuItem,
+    _e: React.MouseEvent<HTMLAnchorElement>,
+    _item: BrowseMenuItem,
   ) {
     setOpen(false);
-    if (item.label === "AI Match" && onSelectAiMatch) {
-      e.preventDefault();
-      onSelectAiMatch();
-    }
   }
 
   return (

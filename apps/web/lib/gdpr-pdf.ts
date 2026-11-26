@@ -5,6 +5,7 @@ import {
   type DemoConversation,
   type DemoInvoice,
   type DemoProductListing,
+  type DemoReview,
   type DemoServiceListing,
 } from "@/lib/demo-flow-store";
 
@@ -18,6 +19,7 @@ export interface GdprExportPayload {
   products: DemoProductListing[];
   invoices: DemoInvoice[];
   conversations: DemoConversation[];
+  reviews?: DemoReview[];
 }
 
 export async function downloadGdprPdf(payload: GdprExportPayload): Promise<void> {
@@ -141,9 +143,11 @@ export async function downloadGdprPdf(payload: GdprExportPayload): Promise<void>
           ? "Paid · Held by Servyn"
           : inv.status === "delivered"
             ? "Delivered · Awaiting Confirmation"
-            : "Released to Provider";
+            : inv.status === "disputed"
+              ? "Payout Paused · Under Review"
+              : "Released to Provider";
     drawRow(
-      `${inv.id} (${inv.kind.toUpperCase()})`,
+      `${inv.refId} (${inv.kind.toUpperCase()})`,
       `${inv.title} · Subtotal ${formatMinorGBP(inv.subtotalMinor)} · Fee ${formatMinorGBP(inv.feeMinor)} · ${statusLabel}`,
     );
   }
@@ -156,6 +160,18 @@ export async function downloadGdprPdf(payload: GdprExportPayload): Promise<void>
       `${conv.customerName} — ${conv.listingTitle}`,
       `${conv.messages.length} messages · Area: ${conv.area}`,
     );
+  }
+  y += 8;
+
+  // 6. Verified Reviews
+  const reviews = payload.reviews ?? [];
+  drawSectionTitle(`6. Verified Customer Reviews (${reviews.length})`);
+  if (reviews.length === 0) {
+    drawRow("Reviews:", "No verified reviews recorded yet.");
+  } else {
+    for (const rev of reviews) {
+      drawRow(`${rev.authorName} (${rev.rating}/5)`, `${rev.title} — "${rev.comment}"`);
+    }
   }
 
   // Footer

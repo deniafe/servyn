@@ -2,7 +2,13 @@
 
 import * as React from "react";
 
-export type DemoInvoiceStatus = "sent" | "paid_held" | "delivered" | "released";
+export type DemoInvoiceStatus =
+  | "sent"
+  | "paid_held"
+  | "delivered"
+  | "disputed"
+  | "released"
+  | "refunded";
 
 export interface DemoServiceListing {
   id: string;
@@ -53,6 +59,7 @@ export interface DemoConversation {
 
 export interface DemoInvoice {
   id: string;
+  refId: string;
   conversationId: string;
   kind: "service" | "product";
   providerName: string;
@@ -62,10 +69,13 @@ export interface DemoInvoice {
   agreedLocation?: string;
   originalAmountMinor?: number;
   discountNote?: string;
+  referralApplied?: boolean;
   subtotalMinor: number;
   feeMinor: number;
   totalMinor: number;
   status: DemoInvoiceStatus;
+  disputeReason?: string;
+  disputedAt?: string;
   stripeSessionId?: string;
   paidAt?: string;
   deliveredAt?: string;
@@ -73,27 +83,214 @@ export interface DemoInvoice {
   createdAt: string;
 }
 
+export interface DemoReview {
+  id: string;
+  invoiceId: string;
+  providerName: string;
+  title: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface WorkingDayHours {
+  open: boolean;
+  from: string;
+  to: string;
+}
+
+export interface VendorAvailability {
+  workingDays: Record<string, WorkingDayHours>;
+  blockedDates: string[];
+}
+
+export interface DemoCommunityComment {
+  id: string;
+  authorName: string;
+  text: string;
+  at: string;
+}
+
+export interface DemoCommunityPost {
+  id: string;
+  authorName: string;
+  authorArea: string;
+  tag: string;
+  body: string;
+  likes: number;
+  likedByMe: boolean;
+  comments: DemoCommunityComment[];
+  createdAt: string;
+}
+
+export type DemoPendingVendorStatus =
+  | "pending"
+  | "approved"
+  | "changes_requested"
+  | "rejected";
+
+export interface DemoPendingVendor {
+  id: string;
+  businessName: string;
+  category: string;
+  area: string;
+  email: string;
+  status: DemoPendingVendorStatus;
+  submittedAt: string;
+}
+
+export interface DemoPortfolioPhoto {
+  id: string;
+  dataUrl: string;
+  caption: string;
+}
+
 export interface DemoFlowState {
   customServices: DemoServiceListing[];
   customProducts: DemoProductListing[];
   conversations: DemoConversation[];
   invoices: DemoInvoice[];
+  reviews: DemoReview[];
+  referralCreditActive: boolean;
+  vendorAvailability: VendorAvailability;
+  communityPosts: DemoCommunityPost[];
+  pendingVendors: DemoPendingVendor[];
+  savedVendorSlugs: string[];
+  vendorPortfolioPhotos: DemoPortfolioPhoto[];
 }
 
 const STORAGE_KEY = "servyn_demo_flow_v1";
 const CHANGE_EVENT = "servyn-demo-flow-change";
 
-export function computeServynFeeMinor(subtotalMinor: number): number {
-  return Math.round(subtotalMinor * 0.1);
+export function computeServynFeeMinor(subtotalMinor: number, referralApplied = false): number {
+  const rate = referralApplied ? 0.05 : 0.1;
+  return Math.round(subtotalMinor * rate);
 }
 
 export function formatMinorGBP(minor: number): string {
   return `£${(minor / 100).toFixed(2)}`;
 }
 
+function makeRefId(seed?: string): string {
+  if (seed) return seed;
+  return `SRV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
+const DEFAULT_WORKING_DAYS: Record<string, WorkingDayHours> = {
+  Monday: { open: true, from: "09:00", to: "18:00" },
+  Tuesday: { open: true, from: "09:00", to: "18:00" },
+  Wednesday: { open: true, from: "09:00", to: "18:00" },
+  Thursday: { open: true, from: "09:00", to: "19:00" },
+  Friday: { open: true, from: "09:00", to: "19:00" },
+  Saturday: { open: true, from: "09:30", to: "17:30" },
+  Sunday: { open: false, from: "10:00", to: "16:00" },
+};
+
+const SEED_COMMUNITY_POSTS: DemoCommunityPost[] = [
+  {
+    id: "post-seed-1",
+    authorName: "Adaeze N.",
+    authorArea: "Hulme",
+    tag: "#braids",
+    body: "Just left Amara Hair & Beauty in Hulme — neatest medium knotless braids I have had in Manchester and my payment stayed protected until we finished.",
+    likes: 18,
+    likedByMe: false,
+    comments: [
+      {
+        id: "cmt-1",
+        authorName: "Chidi O.",
+        text: "Good to know! Booking my sister in for Saturday.",
+        at: "2026-11-25T14:20:00.000Z",
+      },
+    ],
+    createdAt: "2026-11-25T12:10:00.000Z",
+  },
+  {
+    id: "post-seed-2",
+    authorName: "Kwame B.",
+    authorArea: "Moss Side",
+    tag: "#ManchesterFood",
+    body: "Anyone tried Kofi's Kitchen bulk Jollof spice kits for a 40-person birthday? Agreed a bundle discount right inside Servyn chat.",
+    likes: 11,
+    likedByMe: false,
+    comments: [],
+    createdAt: "2026-11-24T18:30:00.000Z",
+  },
+  {
+    id: "post-seed-3",
+    authorName: "Tasha M.",
+    authorArea: "Salford",
+    tag: "#ManchesterEvents",
+    body: "Looking for recommendations for an Afro-Caribbean DJ + small chops caterer in Salford for mid-December. Any favourites on Servyn?",
+    likes: 9,
+    likedByMe: false,
+    comments: [
+      {
+        id: "cmt-2",
+        authorName: "Mama Efe's Kitchen",
+        text: "Happy to send a custom small chops quote via chat!",
+        at: "2026-11-24T10:05:00.000Z",
+      },
+    ],
+    createdAt: "2026-11-24T09:15:00.000Z",
+  },
+];
+
+const SEED_PENDING_VENDORS: DemoPendingVendor[] = [
+  {
+    id: "pv-1",
+    businessName: "Zuri Locs & Natural Care",
+    category: "Hair & Beauty",
+    area: "Chorlton",
+    email: "hello@zurilocs.co.uk",
+    status: "pending",
+    submittedAt: "2026-11-25T11:20:00.000Z",
+  },
+  {
+    id: "pv-2",
+    businessName: "Naija Small Chops Manchester",
+    category: "Catering & Food",
+    area: "Levenshulme",
+    email: "orders@naijasmallchops.co.uk",
+    status: "pending",
+    submittedAt: "2026-11-24T16:45:00.000Z",
+  },
+  {
+    id: "pv-3",
+    businessName: "King's Fade Studio",
+    category: "Barbering & Grooming",
+    area: "Salford",
+    email: "bookings@kingsfade.uk",
+    status: "approved",
+    submittedAt: "2026-11-22T09:10:00.000Z",
+  },
+];
+
 const SEED_STATE: DemoFlowState = {
   customServices: [],
   customProducts: [],
+  referralCreditActive: true,
+  vendorAvailability: {
+    workingDays: DEFAULT_WORKING_DAYS,
+    blockedDates: [],
+  },
+  communityPosts: SEED_COMMUNITY_POSTS,
+  pendingVendors: SEED_PENDING_VENDORS,
+  savedVendorSlugs: ["mama-efes-kitchen"],
+  vendorPortfolioPhotos: [],
+  reviews: [
+    {
+      id: "rev-seed-1",
+      invoiceId: "inv-demo-released-1",
+      providerName: "Kofi's Kitchen",
+      title: "Raw Unrefined Shea Butter · 500g (x3)",
+      rating: 5,
+      comment: "Super fresh Grade A shea, quick Manchester dispatch and great bundle discount.",
+      authorName: "Adaeze N.",
+      createdAt: "2026-11-21T19:00:00.000Z",
+    },
+  ],
   conversations: [
     {
       id: "conv-amara-braids",
@@ -147,6 +344,7 @@ const SEED_STATE: DemoFlowState = {
   invoices: [
     {
       id: "inv-demo-held-1",
+      refId: "SRV-8K2M4P",
       conversationId: "conv-amara-braids",
       kind: "service",
       providerName: "Amara Hair & Beauty",
@@ -164,6 +362,7 @@ const SEED_STATE: DemoFlowState = {
     },
     {
       id: "inv-demo-released-1",
+      refId: "SRV-4R9T1W",
       conversationId: "conv-kofi-jollof",
       kind: "product",
       providerName: "Kofi's Kitchen",
@@ -211,13 +410,38 @@ function parseState(raw: string): DemoFlowState {
   if (raw === "__SSR__" || raw === "__SEED__") return SEED_STATE;
   try {
     const parsed = JSON.parse(raw) as Partial<DemoFlowState>;
+    const rawInvoices = Array.isArray(parsed.invoices) ? parsed.invoices : SEED_STATE.invoices;
+    const normalizedInvoices: DemoInvoice[] = rawInvoices.map((inv, idx) => ({
+      ...inv,
+      refId: inv.refId || `SRV-${String(100000 + idx).slice(-6)}`,
+    }));
     return {
       customServices: Array.isArray(parsed.customServices) ? parsed.customServices : [],
       customProducts: Array.isArray(parsed.customProducts) ? parsed.customProducts : [],
       conversations: Array.isArray(parsed.conversations)
         ? parsed.conversations
         : SEED_STATE.conversations,
-      invoices: Array.isArray(parsed.invoices) ? parsed.invoices : SEED_STATE.invoices,
+      invoices: normalizedInvoices,
+      reviews: Array.isArray(parsed.reviews) ? parsed.reviews : SEED_STATE.reviews,
+      referralCreditActive:
+        typeof parsed.referralCreditActive === "boolean"
+          ? parsed.referralCreditActive
+          : SEED_STATE.referralCreditActive,
+      vendorAvailability: parsed.vendorAvailability?.workingDays
+        ? parsed.vendorAvailability
+        : SEED_STATE.vendorAvailability,
+      communityPosts: Array.isArray(parsed.communityPosts)
+        ? parsed.communityPosts
+        : SEED_COMMUNITY_POSTS,
+      pendingVendors: Array.isArray(parsed.pendingVendors)
+        ? parsed.pendingVendors
+        : SEED_PENDING_VENDORS,
+      savedVendorSlugs: Array.isArray(parsed.savedVendorSlugs)
+        ? parsed.savedVendorSlugs
+        : SEED_STATE.savedVendorSlugs,
+      vendorPortfolioPhotos: Array.isArray(parsed.vendorPortfolioPhotos)
+        ? parsed.vendorPortfolioPhotos
+        : [],
     };
   } catch {
     return SEED_STATE;
@@ -389,9 +613,10 @@ export function createInvoiceAndSend(input: {
   messageText?: string;
 }): DemoInvoice {
   const now = new Date().toISOString();
-  const feeMinor = computeServynFeeMinor(input.subtotalMinor);
+  const feeMinor = computeServynFeeMinor(input.subtotalMinor, false);
   const invoice: DemoInvoice = {
     id: `inv-${Date.now()}`,
+    refId: makeRefId(),
     conversationId: input.conversationId,
     kind: input.kind,
     providerName: input.providerName,
@@ -415,7 +640,7 @@ export function createInvoiceAndSend(input: {
       sender: "provider",
       text:
         input.messageText?.trim() ||
-        `Sent protected-payment invoice for ${input.title} (${formatMinorGBP(invoice.subtotalMinor)} + ${formatMinorGBP(invoice.feeMinor)} Servyn fee).`,
+        `Sent protected-payment invoice ${invoice.refId} for ${input.title} (${formatMinorGBP(invoice.subtotalMinor)} + ${formatMinorGBP(invoice.feeMinor)} Servyn fee).`,
       at: now,
       invoiceId: invoice.id,
     };
@@ -451,20 +676,30 @@ export function createInvoiceAndSend(input: {
   return invoice;
 }
 
-export function markInvoicePaidHeld(invoiceId: string, stripeSessionId?: string): void {
+export function markInvoicePaidHeld(
+  invoiceId: string,
+  stripeSessionId?: string,
+  referralApplied = false,
+): void {
   const now = new Date().toISOString();
   updateState((prev) => ({
     ...prev,
-    invoices: prev.invoices.map((inv) =>
-      inv.id === invoiceId
-        ? {
-            ...inv,
-            status: inv.status === "sent" ? "paid_held" : inv.status,
-            stripeSessionId: stripeSessionId ?? inv.stripeSessionId ?? `cs_test_${Date.now()}`,
-            paidAt: inv.paidAt ?? now,
-          }
-        : inv,
-    ),
+    referralCreditActive: referralApplied ? false : prev.referralCreditActive,
+    invoices: prev.invoices.map((inv) => {
+      if (inv.id !== invoiceId) return inv;
+      const feeMinor = referralApplied
+        ? computeServynFeeMinor(inv.subtotalMinor, true)
+        : inv.feeMinor;
+      return {
+        ...inv,
+        referralApplied: referralApplied || inv.referralApplied,
+        feeMinor,
+        totalMinor: inv.subtotalMinor + feeMinor,
+        status: inv.status === "sent" ? "paid_held" : inv.status,
+        stripeSessionId: stripeSessionId ?? inv.stripeSessionId ?? `cs_test_${Date.now()}`,
+        paidAt: inv.paidAt ?? now,
+      };
+    }),
   }));
 }
 
@@ -475,6 +710,23 @@ export function markInvoiceDelivered(invoiceId: string): void {
     invoices: prev.invoices.map((inv) =>
       inv.id === invoiceId && inv.status === "paid_held"
         ? { ...inv, status: "delivered", deliveredAt: now }
+        : inv,
+    ),
+  }));
+}
+
+export function reportProblemAndPausePayout(invoiceId: string, reason: string): void {
+  const now = new Date().toISOString();
+  updateState((prev) => ({
+    ...prev,
+    invoices: prev.invoices.map((inv) =>
+      inv.id === invoiceId && (inv.status === "paid_held" || inv.status === "delivered")
+        ? {
+            ...inv,
+            status: "disputed",
+            disputeReason: reason.trim() || "Customer reported an issue",
+            disputedAt: now,
+          }
         : inv,
     ),
   }));
@@ -494,6 +746,199 @@ export function confirmSatisfactionAndRelease(invoiceId: string): void {
           }
         : inv,
     ),
+  }));
+}
+
+export function submitVerifiedReview(input: {
+  invoiceId: string;
+  providerName: string;
+  title: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string;
+  authorName: string;
+}): DemoReview {
+  const review: DemoReview = {
+    id: `rev-${Date.now()}`,
+    invoiceId: input.invoiceId,
+    providerName: input.providerName,
+    title: input.title,
+    rating: input.rating,
+    comment: input.comment.trim(),
+    authorName: input.authorName,
+    createdAt: new Date().toISOString(),
+  };
+  updateState((prev) => ({
+    ...prev,
+    reviews: [review, ...prev.reviews.filter((r) => r.invoiceId !== input.invoiceId)],
+  }));
+  return review;
+}
+
+export function activateReferralDiscount(): void {
+  updateState((prev) => ({
+    ...prev,
+    referralCreditActive: true,
+  }));
+}
+
+export function toggleWorkingDay(day: string, patch: Partial<WorkingDayHours>): void {
+  updateState((prev) => {
+    const existing = prev.vendorAvailability.workingDays[day] ?? {
+      open: true,
+      from: "09:00",
+      to: "18:00",
+    };
+    return {
+      ...prev,
+      vendorAvailability: {
+        ...prev.vendorAvailability,
+        workingDays: {
+          ...prev.vendorAvailability.workingDays,
+          [day]: { ...existing, ...patch },
+        },
+      },
+    };
+  });
+}
+
+export function toggleBlockedDate(dateStr: string): void {
+  updateState((prev) => {
+    const exists = prev.vendorAvailability.blockedDates.includes(dateStr);
+    const nextBlocked = exists
+      ? prev.vendorAvailability.blockedDates.filter((d) => d !== dateStr)
+      : [...prev.vendorAvailability.blockedDates, dateStr];
+    return {
+      ...prev,
+      vendorAvailability: {
+        ...prev.vendorAvailability,
+        blockedDates: nextBlocked,
+      },
+    };
+  });
+}
+
+export function resolveDisputeInvoice(
+  invoiceId: string,
+  resolution: "release" | "refund",
+): void {
+  const now = new Date().toISOString();
+  updateState((prev) => ({
+    ...prev,
+    invoices: prev.invoices.map((inv) => {
+      if (inv.id !== invoiceId || inv.status !== "disputed") return inv;
+      if (resolution === "release") {
+        return {
+          ...inv,
+          status: "released",
+          deliveredAt: inv.deliveredAt ?? now,
+          releasedAt: now,
+        };
+      }
+      return {
+        ...inv,
+        status: "refunded",
+      };
+    }),
+  }));
+}
+
+export function addCommunityPost(input: {
+  authorName: string;
+  authorArea: string;
+  tag: string;
+  body: string;
+}): void {
+  const body = input.body.trim();
+  if (!body) return;
+  const post: DemoCommunityPost = {
+    id: `post-${Date.now()}`,
+    authorName: input.authorName.trim() || "Adaeze N.",
+    authorArea: input.authorArea.trim() || "Manchester",
+    tag: input.tag.trim() || "#communityFinds",
+    body,
+    likes: 0,
+    likedByMe: false,
+    comments: [],
+    createdAt: new Date().toISOString(),
+  };
+  updateState((prev) => ({
+    ...prev,
+    communityPosts: [post, ...prev.communityPosts],
+  }));
+}
+
+export function toggleLikePost(postId: string): void {
+  updateState((prev) => ({
+    ...prev,
+    communityPosts: prev.communityPosts.map((p) => {
+      if (p.id !== postId) return p;
+      const nextLiked = !p.likedByMe;
+      return {
+        ...p,
+        likedByMe: nextLiked,
+        likes: Math.max(0, p.likes + (nextLiked ? 1 : -1)),
+      };
+    }),
+  }));
+}
+
+export function addPostComment(postId: string, authorName: string, text: string): void {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  const comment: DemoCommunityComment = {
+    id: `cmt-${Date.now()}`,
+    authorName: authorName.trim() || "Adaeze N.",
+    text: trimmed,
+    at: new Date().toISOString(),
+  };
+  updateState((prev) => ({
+    ...prev,
+    communityPosts: prev.communityPosts.map((p) =>
+      p.id === postId ? { ...p, comments: [...p.comments, comment] } : p,
+    ),
+  }));
+}
+
+export function updatePendingVendorStatus(
+  vendorId: string,
+  status: DemoPendingVendorStatus,
+): void {
+  updateState((prev) => ({
+    ...prev,
+    pendingVendors: prev.pendingVendors.map((v) =>
+      v.id === vendorId ? { ...v, status } : v,
+    ),
+  }));
+}
+
+export function toggleSavedVendor(slug: string): void {
+  updateState((prev) => {
+    const exists = prev.savedVendorSlugs.includes(slug);
+    return {
+      ...prev,
+      savedVendorSlugs: exists
+        ? prev.savedVendorSlugs.filter((s) => s !== slug)
+        : [slug, ...prev.savedVendorSlugs],
+    };
+  });
+}
+
+export function addVendorPortfolioPhoto(dataUrl: string, caption: string): void {
+  const photo: DemoPortfolioPhoto = {
+    id: `photo-${Date.now()}`,
+    dataUrl,
+    caption: caption.trim() || "Portfolio work",
+  };
+  updateState((prev) => ({
+    ...prev,
+    vendorPortfolioPhotos: [photo, ...prev.vendorPortfolioPhotos].slice(0, 8),
+  }));
+}
+
+export function removeVendorPortfolioPhoto(id: string): void {
+  updateState((prev) => ({
+    ...prev,
+    vendorPortfolioPhotos: prev.vendorPortfolioPhotos.filter((p) => p.id !== id),
   }));
 }
 
@@ -520,7 +965,20 @@ export function useDemoFlow() {
     createInvoiceAndSend,
     markInvoicePaidHeld,
     markInvoiceDelivered,
+    reportProblemAndPausePayout,
     confirmSatisfactionAndRelease,
+    submitVerifiedReview,
+    activateReferralDiscount,
+    toggleWorkingDay,
+    toggleBlockedDate,
+    resolveDisputeInvoice,
+    addCommunityPost,
+    toggleLikePost,
+    addPostComment,
+    updatePendingVendorStatus,
+    toggleSavedVendor,
+    addVendorPortfolioPhoto,
+    removeVendorPortfolioPhoto,
     resetDemoFlow,
   };
 }
