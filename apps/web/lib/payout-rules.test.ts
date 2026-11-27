@@ -3,6 +3,7 @@ import {
   canAutoReleaseAt48h,
   evaluateConfirmation,
   FORTY_EIGHT_HOURS_MS,
+  validateServiceSlotNotice,
 } from "./payout-rules";
 
 describe("payout-rules", () => {
@@ -101,5 +102,20 @@ describe("payout-rules", () => {
 
     expect(canAutoReleaseAt48h(eligibleState, new Date(after48h.getTime() - 1000))).toBe(false);
     expect(canAutoReleaseAt48h(eligibleState, after48h)).toBe(true);
+  });
+
+  it("rejects past or <24h service slots and allows >=24h slots", () => {
+    const now = new Date("2026-11-27T12:00:00");
+    expect(validateServiceSlotNotice("2026-11-26 10:30", now).ok).toBe(false);
+    expect(validateServiceSlotNotice("Fri 27 Nov · 13:30", now).ok).toBe(false);
+    expect(validateServiceSlotNotice("Sat 28 Nov · 10:30", now).ok).toBe(false);
+    expect(validateServiceSlotNotice("Sat 28 Nov · 13:30", now).ok).toBe(true);
+    expect(validateServiceSlotNotice("2026-11-29 15:00", now).ok).toBe(true);
+    expect(validateServiceSlotNotice(undefined, now).ok).toBe(true);
+
+    // BST (+1) check: 2026-07-10T11:30:00Z is 12:30 BST in London
+    const bstNow = new Date("2026-07-10T11:30:00.000Z");
+    expect(validateServiceSlotNotice("2026-07-11 12:00", bstNow).ok).toBe(false);
+    expect(validateServiceSlotNotice("2026-07-11 13:00", bstNow).ok).toBe(true);
   });
 });

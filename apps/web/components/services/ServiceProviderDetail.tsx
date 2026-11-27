@@ -299,6 +299,12 @@ export function ServiceProviderDetail({
       agreedDate: dateLabel,
       agreedLocation: `${provider.area}, Manchester`,
       messageText: `Direct booking created for ${selectedOffering.name} (${dateLabel} in ${provider.area}).`,
+      onError: (msg) => {
+        setCheckoutOpen(false);
+        setCheckoutInvoice(null);
+        setBookingHint(msg);
+        scrollToSection("availability");
+      },
     });
     setCheckoutInvoice(inv);
     setCheckoutOpen(true);
@@ -1271,7 +1277,7 @@ export function ServiceProviderDetail({
                 Held in Stripe and released when you and your provider both confirm, or 48 hours
                 after one of you does.{" "}
                 <Link
-                  href="/#protected-payment"
+                  href="/#protected-payments"
                   className="font-semibold text-gold-300 underline decoration-gold-300/60 underline-offset-2 hover:text-gold-400"
                 >
                   How it works
@@ -1288,7 +1294,7 @@ export function ServiceProviderDetail({
               <span>
                 Free cancellation up to 48h before.{" "}
                 <Link
-                  href="/#how-it-works"
+                  href="/refunds"
                   className="font-semibold text-gold-300 underline decoration-gold-300/60 underline-offset-2 hover:text-gold-400"
                 >
                   Policy

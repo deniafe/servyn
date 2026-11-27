@@ -173,15 +173,15 @@ export function StripeCheckoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md border-line bg-surface">
+      <DialogContent className="max-h-[90dvh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto overscroll-contain border-line bg-surface p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="font-serif text-xl text-ink">
             {paidDone ? "Payment protected by Servyn" : "Stripe Protected Checkout"}
           </DialogTitle>
           <DialogDescription className="text-xs text-mut">
             {paidDone
-              ? "Your payment succeeded. Funds stay protected until you confirm satisfactory delivery."
-              : "Processed by Stripe. Your payment stays protected until you confirm the service or goods are delivered."}
+              ? "Your payment succeeded. Funds are held in Stripe (not escrow) until you and your provider both confirm, or 48 hours after one of you does."
+              : "Processed and held in Stripe (not escrow) until you and your provider both confirm, or 48 hours after one of you does."}
           </DialogDescription>
         </DialogHeader>
 

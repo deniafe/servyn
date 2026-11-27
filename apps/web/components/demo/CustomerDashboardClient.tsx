@@ -300,8 +300,8 @@ export function CustomerDashboardClient({
           <div className="flex items-center gap-3 rounded-lg border border-leaf-300 bg-mint p-4 text-xs font-semibold text-mint-d">
             <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
             <span>
-              Stripe payment succeeded! Funds are now held securely within Servyn until you confirm
-              delivery below.
+              Stripe payment succeeded! Funds are held in Stripe (not escrow) until you and your
+              provider both confirm, or 48 hours after one of you does.
             </span>
           </div>
         ) : null}

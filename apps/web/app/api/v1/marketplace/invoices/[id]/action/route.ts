@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq, getDb, liveConversations, liveInvoices, liveMessages, users } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
 import { inngest } from "@/inngest/client";
-import { evaluateConfirmation } from "@/lib/payout-rules";
+import { evaluateConfirmation, validateServiceSlotNotice } from "@/lib/payout-rules";
 import { buildFirstConfirmationEmail, sendPayoutNotificationEmail } from "@/lib/payout-emails";
 
 const InvoiceActionSchema = z.object({
@@ -224,6 +224,15 @@ export async function POST(
         await safeEmitInngest("invoice/released", { invoiceId: inv.id });
       }
     } else if (v.action === "update_booking_details" && inv.status === "sent") {
+      if (inv.kind === "service" && v.agreedDate) {
+        const slotCheck = validateServiceSlotNotice(v.agreedDate, now);
+        if (!slotCheck.ok) {
+          return NextResponse.json(
+            { ok: false, error: { code: "SLOT_EXPIRED", message: slotCheck.message } },
+            { status: 400 },
+          );
+        }
+      }
       const nextSubtotal = v.subtotalMinor ?? inv.subtotalMinor;
       const nextFee = Math.round(nextSubtotal * 0.1);
       const nextTotal = nextSubtotal + nextFee;

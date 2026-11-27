@@ -5,7 +5,7 @@ import { DashboardShellSkeleton } from "@/components/auth/DashboardShellSkeleton
 import { requireRole } from "@/lib/auth";
 
 async function SellerGate({ children }: { children: ReactNode }) {
-  const gate = await requireRole("seller", { requireMfa: true, returnTo: "/seller" });
+  const gate = await requireRole("seller", { requireMfa: false, returnTo: "/seller" });
   if (!gate.allowed) return null;
 
   return (

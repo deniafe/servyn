@@ -28,14 +28,14 @@ const ROLE_OPTIONS: ReadonlyArray<{
     id: "vendor",
     title: "Service vendor",
     description: "Offer services — braiding, childcare, events, home & more.",
-    pill: "2FA Required",
+    pill: "Services",
     icon: Scissors,
   },
   {
     id: "seller",
     title: "Product seller",
     description: "Sell African products, retail & bulk.",
-    pill: "2FA Required",
+    pill: "Retail & Bulk",
     icon: Store,
   },
 ];

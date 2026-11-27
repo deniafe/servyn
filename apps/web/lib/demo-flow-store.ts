@@ -951,6 +951,7 @@ export function createInvoiceAndSend(input: {
   originalAmountMinor?: number;
   discountNote?: string;
   messageText?: string;
+  onError?: (message: string) => void;
 }): DemoInvoice {
   const now = new Date().toISOString();
   const feeMinor = computeServynFeeMinor(input.subtotalMinor, false);
@@ -1029,7 +1030,24 @@ export function createInvoiceAndSend(input: {
         discountNote: input.discountNote,
         messageText: input.messageText,
       }),
-    }).then(() => syncUserMarketplaceState()).catch(() => {});
+    })
+      .then(async (res) => {
+        if (!res.ok && res.status === 400) {
+          const errData = (await res.json().catch(() => null)) as {
+            error?: { message?: string };
+          } | null;
+          updateState((prev) => ({
+            ...prev,
+            invoices: prev.invoices.filter((i) => i.id !== invoice.id),
+          }));
+          input.onError?.(
+            errData?.error?.message ?? "Could not create booking invoice.",
+          );
+          return;
+        }
+        await syncUserMarketplaceState();
+      })
+      .catch(() => {});
   }
 
   return invoice;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, getDb, liveConversations, liveInvoices, liveMessages } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
+import { validateServiceSlotNotice } from "@/lib/payout-rules";
 
 const CreateInvoiceSchema = z.object({
   id: z.string().min(4).max(80).optional(),
@@ -57,6 +58,16 @@ export async function POST(request: Request): Promise<NextResponse> {
         { ok: false, error: { code: "FORBIDDEN", message: "Not part of this conversation" } },
         { status: 403 },
       );
+    }
+
+    if (conv.kind === "service" && v.agreedDate) {
+      const slotCheck = validateServiceSlotNotice(v.agreedDate, new Date());
+      if (!slotCheck.ok) {
+        return NextResponse.json(
+          { ok: false, error: { code: "SLOT_EXPIRED", message: slotCheck.message } },
+          { status: 400 },
+        );
+      }
     }
 
     const feeMinor = Math.round(v.subtotalMinor * 0.1);

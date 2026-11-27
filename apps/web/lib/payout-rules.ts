@@ -73,3 +73,86 @@ export function canAutoReleaseAt48h(state: InvoicePayoutState, now: Date): boole
   if (!state.autoReleaseAt) return false;
   return now.getTime() >= state.autoReleaseAt.getTime();
 }
+
+const MONTH_INDEX: Record<string, number> = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
+};
+
+function makeLondonDate(
+  year: number,
+  monthIndex: number,
+  day: number,
+  hour: number,
+  minute: number,
+): Date {
+  const approxUtc = new Date(Date.UTC(year, monthIndex, day, hour, minute, 0, 0));
+  const tzPart = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(approxUtc)
+    .find((p) => p.type === "timeZoneName")?.value;
+  const offsetHours = tzPart && /\+1\b/.test(tzPart) ? 1 : 0;
+  return new Date(approxUtc.getTime() - offsetHours * 60 * 60 * 1000);
+}
+
+function parseAgreedServiceDate(agreedDate: string, now: Date): Date | null {
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[\sT·]+(\d{2}):(\d{2}))?/.exec(
+    agreedDate.trim(),
+  );
+  if (isoMatch) {
+    return makeLondonDate(
+      Number(isoMatch[1]),
+      Number(isoMatch[2]) - 1,
+      Number(isoMatch[3]),
+      Number(isoMatch[4] ?? "9"),
+      Number(isoMatch[5] ?? "0"),
+    );
+  }
+
+  const labelMatch =
+    /^(?:[a-z]{3}\s+)?(\d{1,2})\s+([a-z]{3})(?:\s*[·,]\s*(\d{2}):(\d{2}))?/i.exec(
+      agreedDate.trim(),
+    );
+  if (labelMatch) {
+    const day = Number(labelMatch[1]);
+    const month = MONTH_INDEX[labelMatch[2]!.toLowerCase()];
+    if (month === undefined) return null;
+    const hour = Number(labelMatch[3] ?? "9");
+    const minute = Number(labelMatch[4] ?? "0");
+    let year = now.getUTCFullYear();
+    if (month < now.getUTCMonth() - 2) {
+      year += 1;
+    }
+    return makeLondonDate(year, month, day, hour, minute);
+  }
+
+  return null;
+}
+
+export function validateServiceSlotNotice(
+  agreedDate: string | undefined,
+  now: Date,
+): { ok: true } | { ok: false; message: string } {
+  if (!agreedDate?.trim()) return { ok: true };
+  const parsed = parseAgreedServiceDate(agreedDate, now);
+  if (!parsed || Number.isNaN(parsed.getTime())) return { ok: true };
+  if (parsed.getTime() < now.getTime() + 24 * 60 * 60 * 1000) {
+    return {
+      ok: false,
+      message: "Bookings require at least 24 hours' notice. Please choose a later slot.",
+    };
+  }
+  return { ok: true };
+}

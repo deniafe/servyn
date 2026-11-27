@@ -31,8 +31,8 @@ const INTENT_META: Record<
     badge: "Join as a Service Vendor",
     title: "Offer your services on Servyn",
     subtitle:
-      "Create one Servyn account to list your services, manage availability, and receive protected payouts (2FA required).",
-    redirectTo: "/mfa-required?redirect_url=/onboarding/vendor",
+      "Create one Servyn account to list your services, manage availability, and receive protected payouts.",
+    redirectTo: "/onboarding/vendor",
     quote: "Protected payments mean I get paid when the job's done — no more chasing.",
     quoteAuthor: "Amara N. · Vendor",
   },
@@ -41,8 +41,8 @@ const INTENT_META: Record<
     badge: "Join as a Product Seller",
     title: "Sell African products on Servyn",
     subtitle:
-      "Create one Servyn account to open your storefront, offer retail & bulk pricing, and manage UK orders (2FA required).",
-    redirectTo: "/mfa-required?redirect_url=/onboarding/seller",
+      "Create one Servyn account to open your storefront, offer retail & bulk pricing, and manage UK orders.",
+    redirectTo: "/onboarding/seller",
     quote: "Buyers finally find our pantry staples and wholesale options in one place.",
     quoteAuthor: "Tunde A. · Seller",
   },
@@ -88,12 +88,26 @@ export default async function SignUpPage({
         })}
       </div>
 
-      <CustomSignUpForm redirectTo={meta.redirectTo} />
-
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-mut">
+      <p className="mb-4 text-center text-[11px] leading-relaxed text-mut">
         One Servyn account works across customer, vendor, and seller roles. By creating an account
-        you confirm you are 18+ and agree to our Terms &amp; Privacy Policy.
+        you confirm you are 18+ and agree to our{" "}
+        <Link
+          href="/terms"
+          className="font-semibold text-leaf-700 underline underline-offset-2 hover:text-leaf-900"
+        >
+          Terms
+        </Link>{" "}
+        &amp;{" "}
+        <Link
+          href="/privacy"
+          className="font-semibold text-leaf-700 underline underline-offset-2 hover:text-leaf-900"
+        >
+          Privacy Policy
+        </Link>
+        .
       </p>
+
+      <CustomSignUpForm redirectTo={meta.redirectTo} />
     </AuthShell>
   );
 }

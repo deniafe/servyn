@@ -76,7 +76,7 @@ const TRUST_PILLARS: ReadonlyArray<TrustPillar> = [
   {
     icon: CreditCard,
     title: "Protected payments",
-    body: "Provider's share releases on your confirmation or after a 48h hold. Not escrow.",
+    body: "Held in Stripe (not escrow). Released when you and your provider both confirm, or 48 hours after one of you does.",
   },
   {
     icon: Users,
