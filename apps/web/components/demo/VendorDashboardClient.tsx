@@ -166,7 +166,7 @@ export function VendorDashboardClient({
         businessName,
         email,
         verificationStatus,
-        mfaEnabled: true,
+        mfaEnabled: false,
         services: customServices,
         products: [],
         invoices: serviceInvoices,
@@ -188,7 +188,6 @@ export function VendorDashboardClient({
               <Wrench className="size-3.5" aria-hidden="true" />
               <span>Service vendor</span>
             </span>
-            <span className="text-[11px] font-semibold text-gold-300">2FA Active</span>
           </div>
 
           <nav className="space-y-2 text-xs font-semibold">

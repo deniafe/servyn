@@ -89,7 +89,7 @@ export function SellerDashboardClient({
         businessName: storefrontName,
         email,
         verificationStatus,
-        mfaEnabled: true,
+        mfaEnabled: false,
         services: [],
         products: customProducts,
         invoices: productInvoices,
@@ -109,7 +109,6 @@ export function SellerDashboardClient({
               <Store className="size-3.5" aria-hidden="true" />
               <span>Product seller</span>
             </span>
-            <span className="text-[11px] font-semibold text-gold-300">2FA Active</span>
           </div>
 
           <nav className="space-y-2 text-xs font-semibold">

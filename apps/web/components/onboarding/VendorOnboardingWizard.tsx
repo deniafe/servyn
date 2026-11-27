@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, ArrowRight, Check, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ShieldAlert, ShieldCheck } from "lucide-react";
 import { TurnstileWidget } from "@/components/observability/TurnstileWidget";
 
 const SERVICE_CATEGORIES = [
@@ -37,7 +37,6 @@ export interface VendorOnboardingWizardProps {
 
 export function VendorOnboardingWizard({
   defaultBusinessName,
-  hasMfa,
 }: VendorOnboardingWizardProps) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [businessName, setBusinessName] = React.useState(defaultBusinessName);
@@ -119,11 +118,7 @@ export function VendorOnboardingWizard({
         return;
       }
 
-      const target =
-        data.requiresMfa || !hasMfa
-          ? `/mfa-required?redirect_url=${encodeURIComponent("/vendor")}`
-          : "/vendor";
-      window.location.assign(target);
+      window.location.assign("/vendor");
     } catch {
       setError("Network error while activating vendor profile.");
       setIsSubmitting(false);
@@ -137,7 +132,7 @@ export function VendorOnboardingWizard({
         {[
           { num: 1, label: "Business profile" },
           { num: 2, label: "Area & booking" },
-          { num: 3, label: "2FA & publish" },
+          { num: 3, label: "Review & publish" },
         ].map((item) => {
           const done = step > item.num;
           const active = step === item.num;
@@ -298,20 +293,14 @@ export function VendorOnboardingWizard({
       {step === 3 ? (
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-md border border-line bg-surface-2 p-4 text-xs leading-relaxed text-ink-2">
-            {hasMfa ? (
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-600" aria-hidden="true" />
-            ) : (
-              <Lock className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden="true" />
-            )}
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-600" aria-hidden="true" />
             <div>
               <p className="font-semibold text-ink">
-                {hasMfa
-                  ? "Two-factor authentication is active on your session"
-                  : "Next step after saving: enable 2FA"}
+                Ready to activate your vendor dashboard
               </p>
               <p className="mt-0.5 text-mut">
-                All vendor dashboards and protected-payment payouts require 2FA. Identity and Stripe
-                Connect verification are completed before listings go live.
+                You can list services, manage availability, and receive Stripe-held protected payouts
+                immediately. Optional 2FA can be enabled anytime in Account Security.
               </p>
             </div>
           </div>

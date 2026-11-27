@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, ArrowRight, Check, Lock, ShieldCheck, Store } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ShieldCheck, Store } from "lucide-react";
 import { TurnstileWidget } from "@/components/observability/TurnstileWidget";
 
 const PRODUCT_CATEGORIES = [
@@ -19,7 +19,6 @@ export interface SellerOnboardingWizardProps {
 
 export function SellerOnboardingWizard({
   defaultStorefrontName,
-  hasMfa,
 }: SellerOnboardingWizardProps) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [storefrontName, setStorefrontName] = React.useState(defaultStorefrontName);
@@ -97,11 +96,7 @@ export function SellerOnboardingWizard({
         return;
       }
 
-      const target =
-        data.requiresMfa || !hasMfa
-          ? `/mfa-required?redirect_url=${encodeURIComponent("/seller")}`
-          : "/seller";
-      window.location.assign(target);
+      window.location.assign("/seller");
     } catch {
       setError("Network error while activating seller storefront.");
       setIsSubmitting(false);
@@ -114,7 +109,7 @@ export function SellerOnboardingWizard({
         {[
           { num: 1, label: "Storefront" },
           { num: 2, label: "Fulfilment & bulk" },
-          { num: 3, label: "2FA & publish" },
+          { num: 3, label: "Review & publish" },
         ].map((item) => {
           const done = step > item.num;
           const active = step === item.num;
@@ -239,20 +234,14 @@ export function SellerOnboardingWizard({
       {step === 3 ? (
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-md border border-line bg-surface-2 p-4 text-xs leading-relaxed text-ink-2">
-            {hasMfa ? (
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-600" aria-hidden="true" />
-            ) : (
-              <Lock className="mt-0.5 size-4 shrink-0 text-gold-600" aria-hidden="true" />
-            )}
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-leaf-600" aria-hidden="true" />
             <div>
               <p className="font-semibold text-ink">
-                {hasMfa
-                  ? "Two-factor authentication is active on your session"
-                  : "Next step after saving: enable 2FA"}
+                Ready to open your seller storefront
               </p>
               <p className="mt-0.5 text-mut">
-                Seller storefronts use release-on-fulfilment payments and require 2FA plus UK
-                consumer-rights compliance.
+                You can list retail and bulk African products immediately under UK consumer-rights
+                compliance. Optional 2FA can be enabled anytime in Account Security.
               </p>
             </div>
           </div>

@@ -91,7 +91,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       ok: true,
       vendorProfile,
       roles,
-      requiresMfa: !current.hasMfa,
+      requiresMfa: false,
     });
   } catch (err) {
     logger.error("seller_storefront_activation_failed", {

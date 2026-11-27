@@ -74,7 +74,7 @@ export function AuthShell({
               </li>
               <li className="flex items-center gap-3">
                 <Lock className="size-4 shrink-0 text-gold-400" aria-hidden="true" />
-                <span>2FA protects every vendor &amp; seller payout</span>
+                <span>Stripe-held protected payments on every booking &amp; order</span>
               </li>
             </ul>
           </div>
@@ -85,8 +85,8 @@ export function AuthShell({
                 <ShieldCheck className="size-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs font-bold text-ink">2FA enabled</p>
-                <p className="text-[11px] text-mut">Vendor &amp; seller accounts secured</p>
+                <p className="text-xs font-bold text-ink">Protected payments</p>
+                <p className="text-[11px] text-mut">Held in Stripe until confirmed</p>
               </div>
             </div>
             <span className="text-xs text-cream-60">Manchester first</span>
