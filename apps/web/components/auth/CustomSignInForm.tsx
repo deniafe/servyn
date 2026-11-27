@@ -55,7 +55,12 @@ export function CustomSignInForm({ redirectUrl = "/dashboard" }: CustomSignInFor
   const [error, setError] = React.useState<string | null>(null);
   const lastAutoSubmittedCodeRef = React.useRef<string | null>(null);
 
-  const isOAuthSecondFactor = Boolean(isLoaded && signIn?.status === "needs_second_factor");
+  const hasSupportedSecondFactors =
+    Array.isArray(signIn?.supportedSecondFactors) &&
+    signIn.supportedSecondFactors.length > 0;
+  const isOAuthSecondFactor = Boolean(
+    isLoaded && signIn?.status === "needs_second_factor" && hasSupportedSecondFactors,
+  );
   const shouldRedirectSignedIn = Boolean(isAuthLoaded && isSignedIn && !isOAuthSecondFactor);
 
   React.useEffect(() => {
@@ -212,6 +217,15 @@ export function CustomSignInForm({ redirectUrl = "/dashboard" }: CustomSignInFor
         >
           <span>{isSubmitting ? "Verifying..." : "Verify & sign in"}</span>
           <ArrowRight className="size-4" aria-hidden="true" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void handleGoogleSignIn()}
+          disabled={!isLoaded || isSubmitting}
+          className="inline-flex w-full cursor-pointer items-center justify-center rounded-full border border-line-2 bg-surface px-4 py-2.5 text-xs font-semibold text-ink-2 transition-colors hover:bg-surface-2 disabled:opacity-60"
+        >
+          Start over with Google
         </button>
       </form>
     );
