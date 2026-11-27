@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { eq, getDb, liveListings, or } from "@servyn/db";
+import { eq, getDb, inArray, liveInvoices, liveListings, or } from "@servyn/db";
 import { SiteFooter } from "@/components/home/SiteFooter";
 import { SiteHeader } from "@/components/home/SiteHeader";
 import { ServiceProviderDetail } from "@/components/services/ServiceProviderDetail";
@@ -15,7 +15,29 @@ import { loadMarketplaceStatsMap } from "@/lib/marketplace-stats";
 
 async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
   const staticProvider = await getServiceProviderBySlug(slug, true);
-  if (staticProvider) return staticProvider;
+  if (staticProvider) {
+    try {
+      const db = getDb();
+      const paidInvs = await db
+        .select({
+          agreedDate: liveInvoices.agreedDate,
+          providerName: liveInvoices.providerName,
+        })
+        .from(liveInvoices)
+        .where(inArray(liveInvoices.status, ["paid_held", "delivered", "released"]));
+      const nameLower = staticProvider.name.trim().toLowerCase();
+      const bookedSlots = Array.from(
+        new Set(
+          paidInvs
+            .filter((i) => i.providerName.trim().toLowerCase() === nameLower && i.agreedDate)
+            .map((i) => i.agreedDate!.trim()),
+        ),
+      );
+      return { ...staticProvider, bookedSlots };
+    } catch {
+      return staticProvider;
+    }
+  }
 
   try {
     const db = getDb();
@@ -58,6 +80,7 @@ async function resolveProvider(slug: string): Promise<ServiceProvider | null> {
       mapPinPosition: { xPercent: 50, yPercent: 50 },
       nextSlot: "Available this week",
       slots: ["10:30", "13:30", "15:00"],
+      bookedSlots: stats?.bookedSlots ?? [],
       responseTime: "Replies promptly",
       bannerVar: "--sv-mint",
       rating: stats?.avgRating ?? 0,

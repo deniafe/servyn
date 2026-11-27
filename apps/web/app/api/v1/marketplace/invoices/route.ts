@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, getDb, liveConversations, liveInvoices, liveMessages } from "@servyn/db";
+import { eq, getDb, inArray, liveConversations, liveInvoices, liveMessages } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
-import { validateServiceSlotNotice } from "@/lib/payout-rules";
+import { normalizeSlotKey, validateServiceSlotNotice } from "@/lib/payout-rules";
 
 const CreateInvoiceSchema = z.object({
   id: z.string().min(4).max(80).optional(),
@@ -66,6 +66,34 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json(
           { ok: false, error: { code: "SLOT_EXPIRED", message: slotCheck.message } },
           { status: 400 },
+        );
+      }
+      const targetKey = normalizeSlotKey(v.agreedDate);
+      const existingBookings = await db
+        .select({
+          agreedDate: liveInvoices.agreedDate,
+          providerUserId: liveInvoices.providerUserId,
+          providerName: liveInvoices.providerName,
+        })
+        .from(liveInvoices)
+        .where(inArray(liveInvoices.status, ["paid_held", "delivered", "released"]));
+      const conflict = existingBookings.some((other) => {
+        if (!other.agreedDate) return false;
+        const sameProvider = conv.providerUserId
+          ? other.providerUserId === conv.providerUserId
+          : other.providerName.trim().toLowerCase() === conv.providerName.trim().toLowerCase();
+        return sameProvider && normalizeSlotKey(other.agreedDate) === targetKey;
+      });
+      if (conflict) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: {
+              code: "SLOT_ALREADY_BOOKED",
+              message: "That date and time slot has already been booked. Please choose another slot.",
+            },
+          },
+          { status: 409 },
         );
       }
     }

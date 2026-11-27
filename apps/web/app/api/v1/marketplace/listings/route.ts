@@ -94,6 +94,7 @@ export async function GET(): Promise<NextResponse> {
           soldCount: stats?.soldCount ?? 0,
           reviewCount: stats?.reviewCount ?? 0,
           avgRating: stats?.avgRating ?? 0,
+          bookedSlots: stats?.bookedSlots ?? [],
           createdAt: r.createdAt.toISOString(),
         };
       }),

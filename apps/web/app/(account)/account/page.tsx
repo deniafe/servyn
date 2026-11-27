@@ -85,7 +85,9 @@ async function AccountContent() {
                 <Lock className="size-4 text-gold-600" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-semibold text-ink">Two-factor authentication</p>
-                  <p className="text-xs text-mut">Required for vendor, seller &amp; admin shells</p>
+                  <p className="text-xs text-mut">
+                    Optional for customers, vendors &amp; sellers; required for admin
+                  </p>
                 </div>
               </div>
               {hasMfa ? (
@@ -115,22 +117,22 @@ async function AccountContent() {
               Add a role without creating a new login.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {!identity.roles.includes("vendor") ? (
-                <Link
-                  href="/onboarding/vendor"
-                  className="rounded-full bg-leaf-800 px-3.5 py-1.5 text-xs font-semibold text-cream hover:bg-leaf-700"
-                >
-                  Add vendor role
-                </Link>
-              ) : null}
-              {!identity.roles.includes("seller") ? (
-                <Link
-                  href="/onboarding/seller"
-                  className="rounded-full border-[1.5px] border-line-2 px-3.5 py-1.5 text-xs font-semibold text-ink-2 hover:border-leaf-500 hover:bg-leaf-50"
-                >
-                  Add seller role
-                </Link>
-              ) : null}
+              <Link
+                href="/onboarding/vendor"
+                className="rounded-full bg-leaf-800 px-3.5 py-1.5 text-xs font-semibold text-cream hover:bg-leaf-700"
+              >
+                {identity.roles.includes("vendor")
+                  ? "Vendor onboarding"
+                  : "Become a service vendor"}
+              </Link>
+              <Link
+                href="/onboarding/seller"
+                className="rounded-full border-[1.5px] border-line-2 px-3.5 py-1.5 text-xs font-semibold text-ink-2 hover:border-leaf-500 hover:bg-leaf-50"
+              >
+                {identity.roles.includes("seller")
+                  ? "Seller onboarding"
+                  : "Become a product seller"}
+              </Link>
             </div>
           </div>
 

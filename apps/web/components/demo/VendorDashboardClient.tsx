@@ -31,6 +31,7 @@ import {
   useDemoFlow,
 } from "@/lib/demo-flow-store";
 import { downloadGdprPdf } from "@/lib/gdpr-pdf";
+import { extractBookingDayMonth } from "@/lib/payout-rules";
 import { cn } from "@/lib/utils";
 
 const VENDOR_CATEGORIES = [
@@ -626,10 +627,11 @@ export function VendorDashboardClient({
 
             <div>
               <h2 className="font-serif text-lg font-semibold text-ink">
-                Block specific dates ({monthHeading})
+                Calendar &amp; Booked Dates ({monthHeading})
               </h2>
               <p className="mt-1 text-xs text-mut">
-                Click any open day to mark yourself unavailable.
+                Click any open day to mark yourself unavailable. Dates with confirmed bookings are
+                highlighted in gold and locked on your public page.
               </p>
 
               <div className="mt-4 rounded-lg border border-line bg-surface-2 p-4">
@@ -651,6 +653,19 @@ export function VendorDashboardClient({
                       ] ?? "Monday";
                     const isOpen = vendorAvailability.workingDays[weekdayName]?.open ?? true;
                     const isBlocked = vendorAvailability.blockedDates.includes(dateStr);
+                    const dayBookings = serviceInvoices.filter((inv) => {
+                      if (
+                        (inv.status !== "paid_held" &&
+                          inv.status !== "delivered" &&
+                          inv.status !== "released") ||
+                        !inv.agreedDate
+                      ) {
+                        return false;
+                      }
+                      const parsed = extractBookingDayMonth(inv.agreedDate);
+                      return parsed !== null && parsed.dayNum === dayNum && parsed.monthIndex === calMonth;
+                    });
+                    const hasBookings = dayBookings.length > 0;
 
                     return (
                       <button
@@ -658,16 +673,26 @@ export function VendorDashboardClient({
                         type="button"
                         disabled={!isOpen}
                         onClick={() => toggleBlockedDate(dateStr)}
+                        title={
+                          hasBookings
+                            ? `${dayBookings.length} booked slot${dayBookings.length > 1 ? "s" : ""}`
+                            : undefined
+                        }
                         className={cn(
-                          "rounded-md py-2 text-xs font-semibold transition-colors",
+                          "relative rounded-md py-2 text-xs font-semibold transition-colors",
                           !isOpen
                             ? "cursor-not-allowed bg-surface text-mut opacity-50"
                             : isBlocked
                               ? "cursor-pointer bg-blush text-blush-d"
-                              : "cursor-pointer bg-mint text-mint-d hover:brightness-95",
+                              : hasBookings
+                                ? "cursor-pointer bg-gold-200 text-gold-ink ring-1 ring-gold-500"
+                                : "cursor-pointer bg-mint text-mint-d hover:brightness-95",
                         )}
                       >
                         {dayNum}
+                        {hasBookings ? (
+                          <span className="ml-0.5 text-[9px] font-bold">({dayBookings.length})</span>
+                        ) : null}
                       </button>
                     );
                   })}
@@ -677,12 +702,63 @@ export function VendorDashboardClient({
                     <span className="size-2.5 rounded-sm bg-mint" /> Available
                   </span>
                   <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm bg-gold-300" /> Booked
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
                     <span className="size-2.5 rounded-sm bg-blush" /> Blocked
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="size-2.5 rounded-sm bg-surface" /> Closed day
                   </span>
                 </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-mut">
+                  Booked Dates &amp; Time Slots
+                </h3>
+                {serviceInvoices.filter(
+                  (inv) =>
+                    (inv.status === "paid_held" ||
+                      inv.status === "delivered" ||
+                      inv.status === "released") &&
+                    Boolean(inv.agreedDate),
+                ).length === 0 ? (
+                  <p className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-xs text-mut">
+                    No booked dates yet — when a customer books a slot, it appears here and is
+                    automatically locked on your service page.
+                  </p>
+                ) : (
+                  serviceInvoices
+                    .filter(
+                      (inv) =>
+                        (inv.status === "paid_held" ||
+                          inv.status === "delivered" ||
+                          inv.status === "released") &&
+                        Boolean(inv.agreedDate),
+                    )
+                    .map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gold-300 bg-gold-50/70 px-3 py-2.5 text-xs"
+                      >
+                        <div>
+                          <p className="font-semibold text-ink">
+                            {inv.agreedDate} · {inv.title}
+                          </p>
+                          <p className="text-[11px] text-mut">
+                            Customer: {inv.customerName} ({inv.refId})
+                          </p>
+                        </div>
+                        <Link
+                          href={`/messages?thread=${encodeURIComponent(inv.conversationId)}`}
+                          className="rounded-full bg-leaf-800 px-3 py-1 text-[11px] font-semibold text-cream hover:bg-leaf-700"
+                        >
+                          Open chat
+                        </Link>
+                      </div>
+                    ))
+                )}
               </div>
             </div>
           </section>

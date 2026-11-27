@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, getDb, liveConversations, liveInvoices, liveMessages, users } from "@servyn/db";
+import { eq, getDb, inArray, liveConversations, liveInvoices, liveMessages, users } from "@servyn/db";
 import { getCurrentIdentity } from "@/lib/auth";
 import { inngest } from "@/inngest/client";
-import { evaluateConfirmation, validateServiceSlotNotice } from "@/lib/payout-rules";
+import { evaluateConfirmation, normalizeSlotKey, validateServiceSlotNotice } from "@/lib/payout-rules";
 import { buildFirstConfirmationEmail, sendPayoutNotificationEmail } from "@/lib/payout-emails";
 
 const InvoiceActionSchema = z.object({
@@ -85,6 +85,38 @@ export async function POST(
     let senderRole: "customer" | "provider" = "customer";
 
     if (v.action === "pay_held" && inv.status === "sent") {
+      if (inv.kind === "service" && inv.agreedDate) {
+        const targetKey = normalizeSlotKey(inv.agreedDate);
+        const existingBookings = await db
+          .select({
+            id: liveInvoices.id,
+            agreedDate: liveInvoices.agreedDate,
+            providerUserId: liveInvoices.providerUserId,
+            providerName: liveInvoices.providerName,
+          })
+          .from(liveInvoices)
+          .where(inArray(liveInvoices.status, ["paid_held", "delivered", "released"]));
+        const conflict = existingBookings.some((other) => {
+          if (other.id === inv.id || !other.agreedDate) return false;
+          const sameProvider = inv.providerUserId
+            ? other.providerUserId === inv.providerUserId
+            : other.providerName.trim().toLowerCase() === inv.providerName.trim().toLowerCase();
+          return sameProvider && normalizeSlotKey(other.agreedDate) === targetKey;
+        });
+        if (conflict) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: {
+                code: "SLOT_ALREADY_BOOKED",
+                message:
+                  "That date and time slot has already been booked by another customer. Please pick a different slot.",
+              },
+            },
+            { status: 409 },
+          );
+        }
+      }
       const referral = Boolean(v.referralApplied);
       const feeMinor = referral ? Math.round(inv.subtotalMinor * 0.05) : inv.feeMinor;
       await db
@@ -230,6 +262,36 @@ export async function POST(
           return NextResponse.json(
             { ok: false, error: { code: "SLOT_EXPIRED", message: slotCheck.message } },
             { status: 400 },
+          );
+        }
+        const targetKey = normalizeSlotKey(v.agreedDate);
+        const existingBookings = await db
+          .select({
+            id: liveInvoices.id,
+            agreedDate: liveInvoices.agreedDate,
+            providerUserId: liveInvoices.providerUserId,
+            providerName: liveInvoices.providerName,
+          })
+          .from(liveInvoices)
+          .where(inArray(liveInvoices.status, ["paid_held", "delivered", "released"]));
+        const conflict = existingBookings.some((other) => {
+          if (other.id === inv.id || !other.agreedDate) return false;
+          const sameProvider = inv.providerUserId
+            ? other.providerUserId === inv.providerUserId
+            : other.providerName.trim().toLowerCase() === inv.providerName.trim().toLowerCase();
+          return sameProvider && normalizeSlotKey(other.agreedDate) === targetKey;
+        });
+        if (conflict) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: {
+                code: "SLOT_ALREADY_BOOKED",
+                message:
+                  "That date and time slot has already been booked. Please choose another slot.",
+              },
+            },
+            { status: 409 },
           );
         }
       }

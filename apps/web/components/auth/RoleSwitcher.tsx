@@ -37,6 +37,10 @@ export function RoleSwitcher({ roles, activeRole }: RoleSwitcherProps) {
     setOptimisticRole(role);
     setSwitching(true);
     try {
+      if (!roles.includes(role)) {
+        router.push(`/onboarding/${role}`);
+        return;
+      }
       const res = await fetch("/api/v1/auth/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,6 +61,13 @@ export function RoleSwitcher({ roles, activeRole }: RoleSwitcherProps) {
     }
   }
 
+  const displayedRoles: RoleContext[] = [
+    "customer",
+    "vendor",
+    "seller",
+    ...(roles.includes("admin") ? (["admin"] as const) : []),
+  ];
+
   return (
     <div className="inline-flex items-center gap-2">
       <div
@@ -64,8 +75,9 @@ export function RoleSwitcher({ roles, activeRole }: RoleSwitcherProps) {
         aria-label="Active role context"
         className="inline-flex items-center rounded-full border border-cream-line bg-leaf-950 p-0.5"
       >
-        {roles.map((role) => {
-          const isActive = role === current;
+        {displayedRoles.map((role) => {
+          const isUnlocked = roles.includes(role);
+          const isActive = isUnlocked && role === current;
           return (
             <button
               key={role}
@@ -73,13 +85,20 @@ export function RoleSwitcher({ roles, activeRole }: RoleSwitcherProps) {
               disabled={switching}
               onClick={() => void handleSelect(role)}
               aria-pressed={isActive}
-              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+              title={
+                isUnlocked
+                  ? `Switch to ${ROLE_LABELS[role]}`
+                  : `Complete ${ROLE_LABELS[role].toLowerCase()} onboarding`
+              }
+              className={`cursor-pointer rounded-full px-2.5 py-1 text-xs font-semibold transition-all sm:px-3 ${
                 isActive
                   ? "bg-linear-to-b from-grad-gold-1 to-grad-gold-2 text-gold-ink shadow-gold"
-                  : "text-cream-75 hover:text-cream"
+                  : isUnlocked
+                    ? "text-cream-75 hover:text-cream"
+                    : "text-gold-300 hover:bg-leaf-900 hover:text-gold-200"
               }`}
             >
-              {ROLE_LABELS[role]}
+              {isUnlocked ? ROLE_LABELS[role] : `+ ${ROLE_LABELS[role]}`}
             </button>
           );
         })}

@@ -17,6 +17,7 @@ export interface ListingStats {
   soldCount: number;
   reviewCount: number;
   avgRating: number;
+  bookedSlots: string[];
   ratingBreakdown: Array<{ stars: 5 | 4 | 3 | 2 | 1; count: number }>;
   reviewList: ListingReviewSummary[];
 }
@@ -37,6 +38,7 @@ function emptyStats(): ListingStats {
     soldCount: 0,
     reviewCount: 0,
     avgRating: 0,
+    bookedSlots: [],
     ratingBreakdown: [
       { stars: 5, count: 0 },
       { stars: 4, count: 0 },
@@ -111,10 +113,22 @@ export async function loadMarketplaceStatsMap(
         breakdownCounts[star] += 1;
       }
 
+      const bookedSlots =
+        listing.kind === "service"
+          ? Array.from(
+              new Set(
+                matchingInvoices
+                  .map((inv) => inv.agreedDate?.trim())
+                  .filter((d): d is string => Boolean(d)),
+              ),
+            )
+          : [];
+
       result.set(listing.id, {
         soldCount: matchingInvoices.length,
         reviewCount,
         avgRating,
+        bookedSlots,
         ratingBreakdown: [
           { stars: 5, count: breakdownCounts[5] },
           { stars: 4, count: breakdownCounts[4] },

@@ -207,6 +207,7 @@ export interface ServiceProvider {
   mapPinPosition: { xPercent: number; yPercent: number };
   nextSlot: string;
   slots: ReadonlyArray<string>;
+  bookedSlots?: ReadonlyArray<string>;
   responseTime: string;
   bannerVar: string;
   rating: number;

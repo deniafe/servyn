@@ -156,3 +156,55 @@ export function validateServiceSlotNotice(
   }
   return { ok: true };
 }
+
+export function normalizeSlotKey(agreedDate: string): string {
+  return agreedDate
+    .trim()
+    .toLowerCase()
+    .replace(/\s*[·,]\s*/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+export function isSlotBooked(
+  day: { id: string; weekday: string; dayNum: number; monthLabel: string },
+  time: string,
+  bookedSlots: ReadonlyArray<string>,
+): boolean {
+  if (bookedSlots.length === 0) return false;
+  const labelKey = normalizeSlotKey(
+    `${day.weekday} ${day.dayNum} ${day.monthLabel} ${time}`,
+  );
+  const shortLabelKey = normalizeSlotKey(`${day.dayNum} ${day.monthLabel} ${time}`);
+  const isoKey = normalizeSlotKey(`${day.id} ${time}`);
+
+  return bookedSlots.some((raw) => {
+    const k = normalizeSlotKey(raw);
+    return k === labelKey || k === isoKey || k.endsWith(shortLabelKey);
+  });
+}
+
+export function extractBookingDayMonth(
+  agreedDate: string,
+): { dayNum: number; monthIndex: number; time: string | null } | null {
+  const trimmed = agreedDate.trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[\sT·]+(\d{2}:\d{2}))?/.exec(trimmed);
+  if (isoMatch) {
+    return {
+      dayNum: Number(isoMatch[3]),
+      monthIndex: Number(isoMatch[2]) - 1,
+      time: isoMatch[4] ?? null,
+    };
+  }
+  const labelMatch =
+    /^(?:[a-z]{3}\s+)?(\d{1,2})\s+([a-z]{3})(?:\s*[·,]\s*(\d{2}:\d{2}))?/i.exec(trimmed);
+  if (labelMatch) {
+    const monthIndex = MONTH_INDEX[labelMatch[2]!.toLowerCase()];
+    if (monthIndex === undefined) return null;
+    return {
+      dayNum: Number(labelMatch[1]),
+      monthIndex,
+      time: labelMatch[3] ?? null,
+    };
+  }
+  return null;
+}

@@ -28,6 +28,7 @@ export interface DemoServiceListing {
   soldCount?: number;
   reviewCount?: number;
   avgRating?: number;
+  bookedSlots?: string[];
   createdAt: string;
 }
 
@@ -52,6 +53,7 @@ export interface DemoProductListing {
   soldCount?: number;
   reviewCount?: number;
   avgRating?: number;
+  bookedSlots?: string[];
   createdAt: string;
 }
 
@@ -519,6 +521,7 @@ interface RawListingDto {
   soldCount?: number;
   reviewCount?: number;
   avgRating?: number;
+  bookedSlots?: string[];
   createdAt: string;
 }
 
@@ -555,6 +558,7 @@ export async function syncPublicListings(): Promise<void> {
           soldCount: typeof row.soldCount === "number" ? row.soldCount : 0,
           reviewCount: typeof row.reviewCount === "number" ? row.reviewCount : 0,
           avgRating: typeof row.avgRating === "number" ? row.avgRating : 0,
+          bookedSlots: Array.isArray(row.bookedSlots) ? row.bookedSlots : [],
           createdAt: row.createdAt,
         });
       } else {
@@ -575,6 +579,7 @@ export async function syncPublicListings(): Promise<void> {
           soldCount: typeof row.soldCount === "number" ? row.soldCount : 0,
           reviewCount: typeof row.reviewCount === "number" ? row.reviewCount : 0,
           avgRating: typeof row.avgRating === "number" ? row.avgRating : 0,
+          bookedSlots: Array.isArray(row.bookedSlots) ? row.bookedSlots : [],
           createdAt: row.createdAt,
         });
       }
@@ -1032,7 +1037,7 @@ export function createInvoiceAndSend(input: {
       }),
     })
       .then(async (res) => {
-        if (!res.ok && res.status === 400) {
+        if (!res.ok && (res.status === 400 || res.status === 409)) {
           const errData = (await res.json().catch(() => null)) as {
             error?: { message?: string };
           } | null;

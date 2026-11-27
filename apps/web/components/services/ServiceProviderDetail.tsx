@@ -34,6 +34,7 @@ import {
   useDemoFlow,
   type DemoInvoice,
 } from "@/lib/demo-flow-store";
+import { isSlotBooked } from "@/lib/payout-rules";
 import type { ServiceProvider } from "@/lib/data/services";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +124,38 @@ export function ServiceProviderDetail({
 }) {
   const router = useRouter();
   const { user } = useUser();
-  const { currentUserId, conversations, invoices } = useDemoFlow();
+  const { currentUserId, conversations, invoices, customServices } = useDemoFlow();
+  const allBookedSlots = React.useMemo<string[]>(() => {
+    const liveSvc = customServices.find(
+      (s) =>
+        s.slug === provider.id ||
+        (provider.ownerUserId && s.ownerUserId === provider.ownerUserId),
+    );
+    const localBooked = invoices
+      .filter((inv) => {
+        if (
+          inv.kind !== "service" ||
+          (inv.status !== "paid_held" &&
+            inv.status !== "delivered" &&
+            inv.status !== "released") ||
+          !inv.agreedDate
+        ) {
+          return false;
+        }
+        return (
+          (provider.ownerUserId && inv.providerUserId === provider.ownerUserId) ||
+          inv.providerName.trim().toLowerCase() === provider.name.trim().toLowerCase()
+        );
+      })
+      .map((inv) => inv.agreedDate!.trim());
+    return Array.from(
+      new Set([
+        ...(provider.bookedSlots ?? []),
+        ...(liveSvc?.bookedSlots ?? []),
+        ...localBooked,
+      ]),
+    );
+  }, [provider.bookedSlots, provider.id, provider.ownerUserId, provider.name, customServices, invoices]);
   const isOwner = Boolean(
     currentUserId && provider.ownerUserId && currentUserId === provider.ownerUserId,
   );
@@ -168,19 +200,24 @@ export function ServiceProviderDetail({
   const effectiveAvailability = React.useMemo(
     () =>
       provider.availability.map((day) => {
-        const slots = day.slots.map((slot) => ({
-          ...slot,
-          available:
-            slot.available &&
-            isSlotAtLeast24HoursAway(day.id, slot.time, nowMinuteMs),
-        }));
+        const slots = day.slots.map((slot) => {
+          const booked = isSlotBooked(day, slot.time, allBookedSlots);
+          return {
+            ...slot,
+            booked,
+            available:
+              slot.available &&
+              !booked &&
+              isSlotAtLeast24HoursAway(day.id, slot.time, nowMinuteMs),
+          };
+        });
         return {
           ...day,
           slots,
           freeCount: slots.filter((s) => s.available).length,
         };
       }),
-    [provider.availability, nowMinuteMs],
+    [provider.availability, nowMinuteMs, allBookedSlots],
   );
   const defaultDayId =
     effectiveAvailability.find((day) => day.freeCount > 0)?.id ??
@@ -256,6 +293,11 @@ export function ServiceProviderDetail({
     }
     if (!activeDay || !isSlotAtLeast24HoursAway(activeDay.id, selectedTime, nowMinuteMs)) {
       setBookingHint("Bookings require at least 24 hours' notice. Please choose a later slot.");
+      scrollToSection("availability");
+      return;
+    }
+    if (isSlotBooked(activeDay, selectedTime, allBookedSlots)) {
+      setBookingHint("That date and time slot has already been booked. Please choose another slot.");
       scrollToSection("availability");
       return;
     }
@@ -860,6 +902,7 @@ export function ServiceProviderDetail({
                         type="button"
                         disabled={!slot.available}
                         aria-pressed={isChosen}
+                        title={slot.booked ? "Already booked" : undefined}
                         whileTap={slot.available ? { scale: 0.94 } : undefined}
                         onClick={() => {
                           setSelectedTime(slot.time);

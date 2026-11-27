@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   canAutoReleaseAt48h,
   evaluateConfirmation,
+  extractBookingDayMonth,
   FORTY_EIGHT_HOURS_MS,
+  isSlotBooked,
   validateServiceSlotNotice,
 } from "./payout-rules";
 
@@ -117,5 +119,23 @@ describe("payout-rules", () => {
     const bstNow = new Date("2026-07-10T11:30:00.000Z");
     expect(validateServiceSlotNotice("2026-07-11 12:00", bstNow).ok).toBe(false);
     expect(validateServiceSlotNotice("2026-07-11 13:00", bstNow).ok).toBe(true);
+  });
+
+  it("matches booked slots and extracts day/month for vendor calendar", () => {
+    const day = { id: "2026-11-29", weekday: "SUN", dayNum: 29, monthLabel: "Nov" };
+    expect(isSlotBooked(day, "10:30", ["SUN 29 Nov · 10:30"])).toBe(true);
+    expect(isSlotBooked(day, "10:30", ["2026-11-29 · 10:30"])).toBe(true);
+    expect(isSlotBooked(day, "12:00", ["SUN 29 Nov · 10:30"])).toBe(false);
+
+    expect(extractBookingDayMonth("SUN 29 Nov · 10:30")).toEqual({
+      dayNum: 29,
+      monthIndex: 10,
+      time: "10:30",
+    });
+    expect(extractBookingDayMonth("2026-12-03 15:00")).toEqual({
+      dayNum: 3,
+      monthIndex: 11,
+      time: "15:00",
+    });
   });
 });
