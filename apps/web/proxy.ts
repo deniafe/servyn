@@ -12,7 +12,7 @@ const isProtectedRoute = createRouteMatcher([
   "/api/v1/(.*)",
 ]);
 
-const isMfaRoute = createRouteMatcher(["/vendor(.*)", "/seller(.*)", "/admin(.*)"]);
+const isMfaRoute = createRouteMatcher(["/admin(.*)"]);
 
 function hasMfaClaim(sessionClaims: unknown): boolean {
   if (typeof sessionClaims !== "object" || sessionClaims === null || !("fva" in sessionClaims)) {

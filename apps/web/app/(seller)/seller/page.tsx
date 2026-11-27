@@ -3,7 +3,7 @@ import { SellerDashboardClient } from "@/components/demo/SellerDashboardClient";
 import { requireRole } from "@/lib/auth";
 
 async function SellerDashboardContent() {
-  const gate = await requireRole("seller", { requireMfa: true, returnTo: "/seller" });
+  const gate = await requireRole("seller", { requireMfa: false, returnTo: "/seller" });
   if (!gate.allowed) return null;
 
   const { identity } = gate.session;

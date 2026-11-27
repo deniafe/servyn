@@ -10,7 +10,7 @@ import { MFA_ENROLLED_COOKIE, verifyMfaEnrolledToken } from "@/lib/mfa-session-c
 
 async function MfaContent({ searchParams }: { searchParams: Promise<{ redirect_url?: string }> }) {
   const params = await searchParams;
-  const redirectUrl = isSafeRelativePath(params.redirect_url) ? params.redirect_url : "/vendor";
+  const redirectUrl = isSafeRelativePath(params.redirect_url) ? params.redirect_url : "/account";
 
   const { userId, sessionId, sessionClaims } = await auth();
   if (userId) {
@@ -37,7 +37,7 @@ export default function MfaRequiredPage({
 }) {
   return (
     <AuthShell
-      badge="Required For Vendors & Admins"
+      badge="Required For Admins · Optional Security"
       badgeTone="gold"
       title="Two-factor authentication"
       subtitle="A second step at login protects payouts, customer addresses, and booking chats."

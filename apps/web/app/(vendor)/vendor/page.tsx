@@ -3,7 +3,7 @@ import { VendorDashboardClient } from "@/components/demo/VendorDashboardClient";
 import { requireRole } from "@/lib/auth";
 
 async function VendorDashboardContent() {
-  const gate = await requireRole("vendor", { requireMfa: true, returnTo: "/vendor" });
+  const gate = await requireRole("vendor", { requireMfa: false, returnTo: "/vendor" });
   if (!gate.allowed) return null;
 
   const { identity } = gate.session;
